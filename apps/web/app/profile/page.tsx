@@ -11,10 +11,12 @@ export default function CareerProfilePage() {
   const [form, setForm] = useState<Record<string, string>>({ full_name: "", headline: "", location: "", email: "", phone: "", links: "", default_summary: "" });
   const [editing, setEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const mutation = useMutation({
     mutationFn: (data: Record<string, string>) => api.put<Profile>("/api/profile", data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["profile"] }); setEditing(false); },
+    onError: (err: Error) => { setUploadMessage({ type: "error", text: "Save failed: " + err.message }); },
   });
 
   const handleSave = () => mutation.mutate(form);
@@ -23,11 +25,15 @@ export default function CareerProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
+    setUploadMessage(null);
     try {
       const result = await api.uploadFile<{ ingestion_id: string; status: string }>("/api/ingestion/resume/upload", file);
-      alert(`Resume uploaded! Ingestion ID: ${result.ingestion_id}`);
+      setUploadMessage({ type: "success", text: `Resume uploaded! Ingestion ID: ${result.ingestion_id}` });
+      setTimeout(() => setUploadMessage(null), 8000);
+      // Reset file input
+      e.target.value = "";
     } catch (err: unknown) {
-      alert("Upload failed: " + (err instanceof Error ? err.message : "unknown error"));
+      setUploadMessage({ type: "error", text: "Upload failed: " + (err instanceof Error ? err.message : "unknown error") });
     } finally {
       setUploading(false);
     }
@@ -83,6 +89,12 @@ export default function CareerProfilePage() {
       <div className="bg-white rounded-lg border border-zinc-200 p-6 space-y-4">
         <h2 className="font-semibold">Import from Existing Resume</h2>
         <p className="text-sm text-zinc-500">Upload a PDF resume to extract positions, skills, and education.</p>
+        {uploadMessage && (
+          <div className={`text-sm p-3 rounded flex items-center justify-between ${uploadMessage.type === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+            <span>{uploadMessage.text}</span>
+            <button onClick={() => setUploadMessage(null)} className="ml-3 text-zinc-400 hover:text-zinc-600 font-bold">&times;</button>
+          </div>
+        )}
         <input type="file" accept=".pdf" onChange={handleUpload} disabled={uploading} className="text-sm" />
         {uploading && <p className="text-sm text-blue-600">Uploading and analyzing...</p>}
       </div>
