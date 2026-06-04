@@ -29,12 +29,120 @@ async def upload_resume_pdf(file: UploadFile = File(...), db: AsyncSession = Dep
             status_code=400,
             detail=f"Unsupported file type '.{ext}'. Allowed: {', '.join(sorted(ALLOWED_RESUME_EXTENSIONS))}",
         )
+
+    # Read file content
+    try:
+        content = await file.read()
+        raw_text = content.decode("utf-8", errors="replace") if content else ""
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read file: {str(e)}")
+
+    if not raw_text.strip():
+        raise HTTPException(status_code=400, detail="File is empty")
+
+    # Create ingestion record
     ingestion = await ingestion_crud.create(db, ResumeIngestionCreate(
         source_filename=file.filename,
         status="processing",
     ))
-    # In the full implementation, this enqueues a Celery task for PDF extraction + LLM analysis
-    return ResumeUploadResponse(ingestion_id=ingestion.id, status="processing")
+
+    # Parse markdown into candidate sections
+    candidates_created = _parse_markdown_sections(db, ingestion.id, raw_text)
+    await db.flush()
+
+    ingestion.status = "parsed"
+    await db.flush()
+
+    return ResumeUploadResponse(
+        ingestion_id=ingestion.id,
+        status="parsed",
+    )
+
+
+def _parse_markdown_sections(db, ingestion_id: str, raw_text: str) -> int:
+    """Parse markdown content into ResumeIngestionCandidate records.
+
+    Splits on ## headers, maps header text to entity types, creates candidates.
+    Returns the number of candidates created.
+    """
+    import re
+
+    ENTITY_TYPE_MAP: dict[str, str] = {
+        "profile": "user_profile",
+        "contact": "user_profile",
+        "experience": "position",
+        "work": "position",
+        "positions": "position",
+        "position": "position",
+        "education": "education",
+        "skills": "skill",
+        "skill": "skill",
+        "projects": "project",
+        "project": "project",
+        "certifications": "certification",
+        "certification": "certification",
+        "achievements": "achievement",
+        "achievement": "achievement",
+        "evidence": "evidence",
+        "summary": "user_profile",
+    }
+
+    # Split by ## headers (level 2 only — main sections)
+    sections = re.split(r"\n(?=## )", raw_text)
+    candidates_created = 0
+
+    for section in sections:
+        # Extract the header line
+        header_match = re.match(r"^(?:#|##)\s+(.+?)(?:\n|$)", section)
+        if not header_match:
+            # Content before the first ## header — treat as profile summary
+            header_text = "summary"
+            section_content = section.strip()
+        else:
+            header_text = header_match.group(1).strip().lower()
+            # Remove the header from content
+            section_content = section[header_match.end():].strip()
+
+        if not section_content:
+            continue
+
+        # Map to entity type
+        entity_type = None
+        for key, etype in ENTITY_TYPE_MAP.items():
+            if key in header_text:
+                entity_type = etype
+                break
+
+        if entity_type is None:
+            entity_type = "other"
+
+        # Build extracted data
+        extracted_data = {
+            "header": header_text,
+            "content": section_content,
+            "source_section": section_content[:500],
+        }
+
+        candidate = ResumeIngestionCandidate(
+            resume_ingestion_id=ingestion_id,
+            entity_type=entity_type,
+            extracted_data=extracted_data,
+            confidence="needs_review",
+            status="pending",
+        )
+        db.add(candidate)
+        candidates_created += 1
+
+    # Also add the full raw text as a "raw_markdown" candidate for reference
+    db.add(ResumeIngestionCandidate(
+        resume_ingestion_id=ingestion_id,
+        entity_type="raw_markdown",
+        extracted_data={"content": raw_text, "filename": ""},
+        confidence="needs_review",
+        status="pending",
+    ))
+
+    return candidates_created + 1
 
 
 @router.get("/resume/{ingestion_id}")

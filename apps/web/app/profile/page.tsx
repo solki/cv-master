@@ -25,7 +25,7 @@ export default function CareerProfilePage() {
     }
   }, [profile]);
   const [uploading, setUploading] = useState(false);
-  const [uploadMessage, setUploadMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [uploadMessage, setUploadMessage] = useState<{ type: "success" | "error"; text: string; ingestionId?: string } | null>(null);
 
   const mutation = useMutation({
     mutationFn: (data: Record<string, string>) => api.put<Profile>("/api/profile", data),
@@ -42,7 +42,11 @@ export default function CareerProfilePage() {
     setUploadMessage(null);
     try {
       const result = await api.uploadFile<{ ingestion_id: string; status: string }>("/api/ingestion/resume/upload", file);
-      setUploadMessage({ type: "success", text: `Resume uploaded! Ingestion ID: ${result.ingestion_id}` });
+      setUploadMessage({
+        type: "success",
+        text: `Resume uploaded! Ingestion ID: ${result.ingestion_id}`,
+        ingestionId: result.ingestion_id,
+      });
       setTimeout(() => setUploadMessage(null), 8000);
       // Reset file input
       e.target.value = "";
@@ -104,14 +108,24 @@ export default function CareerProfilePage() {
 
       <div className="bg-slate-900 rounded-lg shadow-sm border border-slate-700 p-6 space-y-4">
         <h2 className="font-semibold">Import from Existing Resume</h2>
-        <p className="text-sm text-slate-500">Upload a PDF resume to extract positions, skills, and education.</p>
+        <p className="text-sm text-slate-500">Upload a Markdown (.md), text (.txt), or PDF resume to extract positions, skills, and education.</p>
         {uploadMessage && (
           <div className={`text-sm p-3 rounded flex items-center justify-between ${uploadMessage.type === "success" ? "bg-green-950 text-green-400 border border-green-800" : "bg-red-950 text-red-400 border border-red-800"}`}>
-            <span>{uploadMessage.text}</span>
+            <div className="flex items-center gap-3">
+              <span>{uploadMessage.text}</span>
+              {uploadMessage.ingestionId && (
+                <a
+                  href={`/ingestion/${uploadMessage.ingestionId}`}
+                  className="text-blue-400 hover:text-blue-300 underline text-xs font-medium"
+                >
+                  View candidates →
+                </a>
+              )}
+            </div>
             <button onClick={() => setUploadMessage(null)} className="ml-3 text-slate-500 hover:text-slate-300 font-bold">&times;</button>
           </div>
         )}
-        <input type="file" accept=".pdf" onChange={handleUpload} disabled={uploading} className="text-sm" />
+        <input type="file" accept=".pdf,.md,.txt" onChange={handleUpload} disabled={uploading} className="text-sm" />
         {uploading && <p className="text-sm text-blue-400">Uploading and analyzing...</p>}
       </div>
     </div>

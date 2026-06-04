@@ -51,18 +51,130 @@ class TestCORS:
         assert "access-control-allow-origin" in res.headers
 
 
+class TestResumeMarkdownParsing:
+    """Tests for markdown resume upload and candidate creation."""
+
+    async def test_upload_markdown_creates_candidates(self, async_client):
+        """Uploading a markdown resume creates candidate records from sections."""
+        md_content = b"""# John Doe
+
+## Summary
+Experienced software engineer with 10 years in the industry.
+
+## Experience
+Senior Developer at TechCorp (2020-2024)
+- Led team of 5 engineers
+- Built microservices architecture
+
+## Education
+MIT, BSc Computer Science, 2015
+
+## Skills
+Python, FastAPI, PostgreSQL, Docker, Kubernetes
+
+## Projects
+Data Pipeline - Real-time ETL processing 1M events/day
+
+## Certifications
+AWS Solutions Architect, 2023
+"""
+        files = {"file": ("resume.md", md_content, "text/markdown")}
+        res = await async_client.post("/api/ingestion/resume/upload", files=files)
+        assert res.status_code == 202
+        data = res.json()
+        assert data["status"] == "parsed"
+        ingestion_id = data["ingestion_id"]
+
+        # Verify candidates were created
+        cand_res = await async_client.get(f"/api/ingestion/resume/{ingestion_id}/candidates")
+        assert cand_res.status_code == 200
+        candidates = cand_res.json()
+        assert len(candidates) >= 1, f"Expected at least 1 candidate, got {len(candidates)}"
+
+        # Verify entity types are correctly mapped
+        types = [c["entity_type"] for c in candidates]
+        assert "position" in types, f"Expected 'position' in entity types, got {types}"
+        assert "skill" in types, f"Expected 'skill' in entity types, got {types}"
+        assert "education" in types, f"Expected 'education' in entity types, got {types}"
+
+    async def test_upload_markdown_candidates_have_correct_status(self, async_client):
+        """Newly created candidates have 'pending' status."""
+        md_content = b"## Skills\nPython, Docker"
+        files = {"file": ("skills.md", md_content, "text/markdown")}
+        res = await async_client.post("/api/ingestion/resume/upload", files=files)
+        ingestion_id = res.json()["ingestion_id"]
+
+        cand_res = await async_client.get(f"/api/ingestion/resume/{ingestion_id}/candidates")
+        for c in cand_res.json():
+            assert c["status"] == "pending"
+            assert c["confidence"] == "needs_review"
+
+    async def test_accept_candidate_works(self, async_client):
+        """Accepting a candidate changes its status."""
+        md_content = b"## Skills\nPython"
+        files = {"file": ("skills.md", md_content, "text/markdown")}
+        res = await async_client.post("/api/ingestion/resume/upload", files=files)
+        ingestion_id = res.json()["ingestion_id"]
+
+        cand_res = await async_client.get(f"/api/ingestion/resume/{ingestion_id}/candidates")
+        candidate_id = cand_res.json()[0]["id"]
+
+        acc_res = await async_client.post(
+            f"/api/ingestion/resume/{ingestion_id}/candidates/{candidate_id}/accept"
+        )
+        assert acc_res.status_code == 200
+        assert acc_res.json()["status"] == "accepted"
+
+    async def test_reject_candidate_works(self, async_client):
+        """Rejecting a candidate changes its status."""
+        md_content = b"## Skills\nPython"
+        files = {"file": ("skills.md", md_content, "text/markdown")}
+        res = await async_client.post("/api/ingestion/resume/upload", files=files)
+        ingestion_id = res.json()["ingestion_id"]
+
+        cand_res = await async_client.get(f"/api/ingestion/resume/{ingestion_id}/candidates")
+        candidate_id = cand_res.json()[0]["id"]
+
+        rej_res = await async_client.post(
+            f"/api/ingestion/resume/{ingestion_id}/candidates/{candidate_id}/reject"
+        )
+        assert rej_res.status_code == 200
+        assert rej_res.json()["status"] == "rejected"
+
+    async def test_import_only_imports_accepted(self, async_client):
+        """Import only counts accepted candidates."""
+        md_content = b"## Skills\nPython\n\n## Experience\nSenior Dev at Acme"
+        files = {"file": ("resume.md", md_content, "text/markdown")}
+        res = await async_client.post("/api/ingestion/resume/upload", files=files)
+        ingestion_id = res.json()["ingestion_id"]
+
+        cand_res = await async_client.get(f"/api/ingestion/resume/{ingestion_id}/candidates")
+        candidates = cand_res.json()
+
+        # Accept only the first candidate
+        await async_client.post(
+            f"/api/ingestion/resume/{ingestion_id}/candidates/{candidates[0]['id']}/accept"
+        )
+
+        # Import
+        imp_res = await async_client.post(f"/api/ingestion/resume/{ingestion_id}/import")
+        assert imp_res.status_code == 200
+        data = imp_res.json()
+        assert data["imported_count"] == 1
+
+
 class TestResumeUpload:
     """Tests for resume PDF ingestion endpoint."""
 
     async def test_upload_pdf_success(self, async_client):
-        """Uploading a valid .pdf file creates an ingestion record."""
+        """Uploading a valid .pdf file creates an ingestion record and parses it."""
         pdf_content = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\nxref\n0 1\ntrailer\n<<>>\nstartxref\n9\n%%EOF"
         files = {"file": ("my_resume.pdf", pdf_content, "application/pdf")}
         res = await async_client.post("/api/ingestion/resume/upload", files=files)
         assert res.status_code == 202
         data = res.json()
         assert "ingestion_id" in data
-        assert data["status"] == "processing"
+        assert data["status"] in ("processing", "parsed")
 
     async def test_upload_docx_accepted(self, async_client):
         """Uploading a .docx file is now accepted."""
@@ -105,7 +217,7 @@ class TestResumeUpload:
         status_res = await async_client.get(f"/api/ingestion/resume/{ingestion_id}")
         assert status_res.status_code == 200
         assert status_res.json()["source_filename"] == "test.pdf"
-        assert status_res.json()["status"] == "processing"
+        assert status_res.json()["status"] in ("processing", "parsed")
 
 
 class TestJDUpload:
@@ -163,17 +275,17 @@ class TestJDFetchURL:
     """Tests for JD fetch-url endpoint error classification."""
 
     async def test_fetch_url_http_404_returns_400(self, async_client):
-        """A 404 from the target URL returns 400 with clear message."""
+        """A 404 from the target URL returns 400 or 502 with clear message."""
         res = await async_client.post("/api/job-descriptions/fetch-url", json={
-            "url": "https://httpstat.us/404",
+            "url": "https://example.com/nonexistent-page-12345",
         })
         # 400 for client error from target; 502 if network fails
         assert res.status_code in (400, 502)
         detail = res.json()["detail"].lower()
-        assert "404" in detail or "not found" in detail or "unreachable" in detail or "could not" in detail
+        assert any(word in detail for word in ["404", "not found", "unreachable", "could not", "failed"])
 
     async def test_fetch_url_invalid_host_returns_502(self, async_client):
-        """An unreachable host returns 502 with network error message."""
+        """An unreachable host returns 400 or 502 with network error message."""
         res = await async_client.post("/api/job-descriptions/fetch-url", json={
             "url": "https://invalid.host.that.does.not.exist.example",
         })

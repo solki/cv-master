@@ -262,6 +262,8 @@ Full list of available variables (see `.env.example`):
 - [Development Task Breakdown](./docs/11-development-task-breakdown.md): Milestone-level tasks with acceptance criteria.
 - [Knowledge Base ADR](./docs/adr/0001-knowledge-base-architecture.md): Obsidian, QBrain-style, and Mem0-style comparison with the recommended approach.
 - [LLM Provider ADR](./docs/adr/0002-llm-provider-strategy.md): Provider abstraction, environment variables, and Tavily integration.
+- [LLM Extraction ADR](./docs/adr/0003-llm-agent-extraction-strategy.md): Agent-based structured entity extraction from resumes.
+- [Agent Pipeline Design](./docs/12-agent-pipeline-design.md): Detailed design for LLM extraction and analysis pipeline.
 - [Primary Design Spec](./docs/superpowers/specs/2026-06-04-cv-master-design.md): Consolidated design specification.
 
 ## Target Stack
