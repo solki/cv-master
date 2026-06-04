@@ -26,7 +26,7 @@ export interface Project {
 
 export interface Evidence {
   id: string; type: string; title: string; description: string;
-  confidence: number; created_at: string;
+  url: string; confidence: number; created_at: string; updated_at: string;
 }
 
 export interface Resume {
