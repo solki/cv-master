@@ -7,6 +7,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { api } from "@/lib/api";
 import type { Project, PaginatedResponse } from "@/lib/types";
 import { projectSchema, type ProjectFormData } from "@/lib/validations";
+import PageHeader from "@/components/ui/page-header";
+import { ListSkeleton } from "@/components/ui/skeleton";
+import EmptyState from "@/components/ui/empty-state";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
+import { toast } from "@/components/ui/toast";
+import { ProjectsIcon } from "@/components/icons";
 
 export default function ProjectsPage() {
   const queryClient = useQueryClient();
@@ -16,7 +22,7 @@ export default function ProjectsPage() {
   });
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
 
   const {
     register,
@@ -29,21 +35,25 @@ export default function ProjectsPage() {
     defaultValues: { title: "", organization: "", role: "", domain: "", summary: "", skills: "", tools: "" },
   });
 
-  const createMutation = useMutation({
-    mutationFn: (data: ProjectFormData) =>
-      editingId ? api.put(`/api/projects/${editingId}`, data) : api.post("/api/projects", data),
+  const saveMutation = useMutation({
+    mutationFn: (formData: ProjectFormData) =>
+      editingId ? api.put(`/api/projects/${editingId}`, formData) : api.post("/api/projects", formData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast("success", editingId ? "Project updated" : "Project created");
       closeForm();
     },
+    onError: (err: Error) => toast("error", err.message),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/api/projects/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
-      setDeletingId(null);
+      toast("success", "Project deleted");
+      setDeleteTarget(null);
     },
+    onError: (err: Error) => toast("error", err.message),
   });
 
   const closeForm = () => {
@@ -64,20 +74,22 @@ export default function ProjectsPage() {
     setShowForm(true);
   };
 
-  const onSubmit = (formData: ProjectFormData) => createMutation.mutate(formData);
+  const onSubmit = (formData: ProjectFormData) => saveMutation.mutate(formData);
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Projects</h1>
-          <p className="text-slate-500 mt-1">Reusable resume building blocks</p>
-        </div>
-        <button onClick={() => { setEditingId(null); reset(); setShowForm(true); }}
-          className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-500 transition-colors">
-          New Project
-        </button>
-      </div>
+      <PageHeader
+        title="Projects"
+        description="Reusable resume building blocks"
+        actions={
+          <button
+            onClick={() => { setEditingId(null); reset(); setShowForm(true); }}
+            className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-500 transition-colors"
+          >
+            New Project
+          </button>
+        }
+      />
 
       {error && (
         <div className="bg-red-950 text-red-400 text-sm p-3 rounded border border-red-800">
@@ -86,8 +98,8 @@ export default function ProjectsPage() {
       )}
 
       {showForm && (
-        <form onSubmit={handleSubmit(onSubmit)} className="bg-slate-900 rounded-lg shadow-sm border border-slate-700 p-6 space-y-3">
-          <h2 className="font-semibold">{editingId ? "Edit Project" : "New Project"}</h2>
+        <form onSubmit={handleSubmit(onSubmit)} className="bg-slate-900 rounded-lg border border-slate-700 p-6 space-y-3">
+          <h2 className="font-semibold text-slate-200">{editingId ? "Edit Project" : "New Project"}</h2>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <input {...register("title")} placeholder="Title *" className={`border px-3 py-2 text-sm rounded w-full ${errors.title ? "border-red-500" : ""}`} />
@@ -100,56 +112,57 @@ export default function ProjectsPage() {
             <input {...register("tools")} placeholder="Tools (comma-separated)" className="border px-3 py-2 text-sm rounded col-span-2" />
           </div>
           <textarea {...register("summary")} rows={3} placeholder="Summary" className="w-full border px-3 py-2 text-sm rounded" />
-          {createMutation.isError && (
-            <p className="text-red-400 text-sm">Save failed: {createMutation.error.message}</p>
-          )}
           <div className="flex gap-2">
-            <button type="submit" disabled={createMutation.isPending}
+            <button type="submit" disabled={saveMutation.isPending}
               className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50 inline-flex items-center gap-2">
-              {createMutation.isPending && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-              {createMutation.isPending ? "Saving..." : editingId ? "Update" : "Save"}
+              {saveMutation.isPending && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+              {saveMutation.isPending ? "Saving..." : editingId ? "Update" : "Save"}
             </button>
-            <button type="button" onClick={closeForm} className="text-sm text-slate-500 hover:text-slate-300">Cancel</button>
+            <button type="button" onClick={closeForm} className="text-sm text-slate-400 hover:text-slate-200">Cancel</button>
           </div>
         </form>
       )}
 
-      <div className="bg-slate-900 rounded-lg shadow-sm border border-slate-700 p-6">
-        {isLoading ? <p className="text-slate-500 text-sm">Loading...</p> :
-          data?.items?.length ? (
-            <ul className="space-y-2">
-              {data.items.map((p: Project) => (
-                <li key={p.id} className="flex items-center justify-between border-b border-slate-800 pb-2 group">
-                  <button onClick={() => startEdit(p)} className="text-left flex-1 hover:bg-slate-950 rounded px-2 py-1 -mx-2 transition-colors">
-                    <p className="font-medium text-sm">{p.title}</p>
-                    <p className="text-xs text-slate-500">{p.role} at {p.organization} &middot; {p.domain}</p>
-                  </button>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => startEdit(p)}
-                      className="text-xs text-blue-400 hover:bg-blue-950 px-2 py-1 rounded transition-colors">Edit</button>
-                    {deletingId === p.id ? (
-                      <span className="text-xs text-slate-500 px-2">Delete?</span>
-                    ) : (
-                      <button onClick={() => setDeletingId(p.id)}
-                        className="text-xs text-red-400 hover:bg-red-950 px-2 py-1 rounded transition-colors">Delete</button>
-                    )}
-                  </div>
-                  {deletingId === p.id && (
-                    <div className="flex items-center gap-1 ml-2">
-                      <button onClick={() => deleteMutation.mutate(p.id)} disabled={deleteMutation.isPending}
-                        className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-500 disabled:opacity-50">
-                        {deleteMutation.isPending ? "..." : "Confirm"}
-                      </button>
-                      <button onClick={() => setDeletingId(null)}
-                        className="text-xs text-slate-500 hover:bg-slate-800 px-2 py-1 rounded">No</button>
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : <p className="text-sm text-slate-500">No projects yet.</p>
-        }
+      <div className="bg-slate-900 rounded-lg border border-slate-700 p-6">
+        {isLoading ? (
+          <ListSkeleton rows={4} />
+        ) : data?.items?.length ? (
+          <ul className="space-y-2">
+            {data.items.map((p: Project) => (
+              <li key={p.id} className="flex items-center justify-between border-b border-slate-800 pb-2 group">
+                <button onClick={() => startEdit(p)} className="text-left flex-1 hover:bg-slate-800 rounded px-2 py-1 -mx-2 transition-colors">
+                  <p className="font-medium text-sm text-slate-200">{p.title}</p>
+                  <p className="text-xs text-slate-400">{p.role} at {p.organization} &middot; {p.domain}</p>
+                </button>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => startEdit(p)}
+                    className="text-xs text-blue-400 hover:bg-blue-950 px-2 py-1 rounded transition-colors">Edit</button>
+                  <button onClick={() => setDeleteTarget(p)}
+                    className="text-xs text-red-400 hover:bg-red-950 px-2 py-1 rounded transition-colors">Delete</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <EmptyState
+            icon={<ProjectsIcon className="w-5 h-5" />}
+            title="No projects yet"
+            description="Add your first project to start building your resume blocks."
+            action={{ label: "New Project", onClick: () => { setEditingId(null); reset(); setShowForm(true); } }}
+          />
+        )}
       </div>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete Project"
+        description={`Permanently delete "${deleteTarget?.title}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        loading={deleteMutation.isPending}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
