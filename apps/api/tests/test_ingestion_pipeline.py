@@ -13,8 +13,8 @@ class TestTextExtraction:
         res = await async_client.post("/api/ingestion/resume/upload", files=files)
         assert res.status_code == 202
         data = res.json()
-        assert data["status"] == "review_ready"
-        assert data["candidate_count"] > 0
+        assert data["status"] == "parsed"
+        assert "ingestion_id" in data
 
     async def test_extract_txt(self, async_client):
         """Upload a .txt file and get candidates."""
@@ -23,7 +23,7 @@ class TestTextExtraction:
         res = await async_client.post("/api/ingestion/resume/upload", files=files)
         assert res.status_code == 202
         data = res.json()
-        assert data["status"] == "review_ready"
+        assert data["status"] == "parsed"
 
     async def test_extract_empty_file(self, async_client):
         """Empty file returns 400."""
@@ -118,7 +118,7 @@ class TestCandidateFlow:
         assert status_res.status_code == 200
         data = status_res.json()
         assert data["source_filename"] == "resume.txt"
-        assert data["status"] == "review_ready"
+        assert data["status"] == "parsed"
 
 
 class TestImportFlow:

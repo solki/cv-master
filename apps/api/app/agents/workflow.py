@@ -54,10 +54,25 @@ async def research_node(state: ResumeWorkflowState) -> ResumeWorkflowState:
 
 
 async def retrieve_node(state: ResumeWorkflowState) -> ResumeWorkflowState:
-    """Stage 3: Retrieve relevant career evidence."""
+    """Stage 3: Retrieve relevant career evidence using hybrid search."""
     state["current_stage"] = "retrieve"
-    # In the full implementation, this uses RetrievalService.hybrid_search
-    state["retrieved_items"] = []
+    try:
+        from app.knowledge.retrieval import RetrievalService
+        from app.db.session import async_session_factory
+
+        service = RetrievalService()
+        jd = state.get("jd_analysis", {})
+        query_parts = [jd.get("job_title", "")]
+        query_parts.extend(jd.get("required_skills", []))
+        query_parts.extend(jd.get("preferred_skills", []))
+        query = " ".join(filter(None, query_parts))
+
+        async with async_session_factory() as db:
+            results = await service.hybrid_search(db, query=query, top_k=20)
+            state["retrieved_items"] = results
+    except Exception as e:
+        state["errors"].append(f"Retrieval failed: {str(e)}")
+        state["retrieved_items"] = []
     return state
 
 
@@ -84,6 +99,16 @@ async def strategy_node(state: ResumeWorkflowState) -> ResumeWorkflowState:
 async def draft_node(state: ResumeWorkflowState) -> ResumeWorkflowState:
     """Stage 5: Draft resume sections."""
     state["current_stage"] = "draft"
+    # Track revision count to prevent infinite loops
+    revision_count = state.get("revision_count", 0) + 1
+    state["revision_count"] = revision_count
+
+    # Stop revising after 3 attempts
+    if revision_count > 3:
+        state["needs_revision"] = False
+        state["errors"].append("Max revision limit reached (3)")
+        return state
+
     llm = get_llm_client()
     prompt = RESUME_WRITER_PROMPT.format(
         strategy=json.dumps(state.get("resume_strategy", {})),
@@ -97,7 +122,10 @@ async def draft_node(state: ResumeWorkflowState) -> ResumeWorkflowState:
         state["draft_resume"] = result
     except Exception as e:
         state["errors"].append(f"Draft failed: {str(e)}")
-        state["draft_resume"] = {"error": str(e)}
+        if not state.get("draft_resume"):
+            state["draft_resume"] = {"error": str(e)}
+        # Stop revising on LLM failure
+        state["needs_revision"] = False
     return state
 
 
@@ -204,6 +232,7 @@ async def run_resume_generation(jd_text: str, job_description_id: str = "") -> R
         "errors": [],
         "needs_revision": False,
         "current_stage": "init",
+        "revision_count": 0,
     }
     result = await workflow.ainvoke(initial_state)
     return result
