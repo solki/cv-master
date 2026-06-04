@@ -158,12 +158,26 @@ GET /api/exports/{export_id}
 GET /api/exports/{export_id}/download
 ```
 
+**Export flow contract:**
+
+1. Create a resume via `POST /api/resumes`
+2. Generate a version via `POST /api/resumes/{resume_id}/generate` — this creates a `ResumeVersion` row
+3. Get the version ID via `GET /api/resumes/{resume_id}/versions`
+4. Construct export ID: `export_{version_id}:{format}` (colon delimiter)
+5. Download via `GET /api/exports/{export_id}/download`
+
+**Export ID format**: `export_{version_uuid}:{format}`
+- `version_uuid`: the `id` from `ResumeVersion` (UUID v4, never contains `:`)
+- `format`: one of `markdown`, `html`, `pdf`, `docx`
+- The colon (`:`) delimiter is safe because UUIDs never contain colons
+- Example: `export_550e8400-e29b-41d4-a716-446655440000:pdf`
+
 Supported export formats:
 
-- `markdown`
-- `html`
-- `pdf`
-- `docx`
+- `markdown` — returns `text/markdown`
+- `html` — returns `text/html`
+- `pdf` — returns `application/pdf` (requires weasyprint; falls back to HTML bytes)
+- `docx` — returns `application/vnd.openxmlformats-officedocument.wordprocessingml.document` (requires python-docx; falls back to markdown bytes)
 
 ### Jobs
 
