@@ -2,6 +2,19 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.health import router as health_router
+from app.api.routes.profile import router as profile_router
+from app.api.routes.job_descriptions import router as jd_router
+from app.api.routes.resumes import router as resumes_router
+from app.api.routes.ingestion import router as ingestion_router
+from app.api.routes.career_routers import (
+    positions_router,
+    projects_router,
+    achievements_router,
+    skills_router,
+    educations_router,
+    certifications_router,
+    evidences_router,
+)
 from app.core.settings import get_settings
 
 settings = get_settings()
@@ -22,7 +35,29 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Health
     app.include_router(health_router)
+
+    # Profile
+    app.include_router(profile_router)
+
+    # Career entity CRUD
+    app.include_router(positions_router)
+    app.include_router(projects_router)
+    app.include_router(achievements_router)
+    app.include_router(skills_router)
+    app.include_router(educations_router)
+    app.include_router(certifications_router)
+    app.include_router(evidences_router)
+
+    # Job Descriptions
+    app.include_router(jd_router)
+
+    # Resumes
+    app.include_router(resumes_router)
+
+    # Resume Ingestion
+    app.include_router(ingestion_router)
 
     return app
 
