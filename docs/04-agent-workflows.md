@@ -186,43 +186,63 @@ flowchart LR
   Store --> Vault["Sync Markdown Vault"]
 ```
 
-### Resume PDF Ingestion
+### Resume Ingestion (Multi-format)
 
-Purpose: allow the user to bootstrap their career knowledge base by uploading an existing resume in PDF format. The system extracts structured information and presents it as reviewable candidate snippets.
+> **Implementation Status (2026-06-05)**: Design phase. Rule-based `_parse_markdown_sections()` is the current fallback. LLM-based extraction agents defined in [ADR 0003](adr/0003-llm-agent-extraction-strategy.md) and [Agent Pipeline Design](../docs/12-agent-pipeline-design.md).
+
+Purpose: allow the user to bootstrap their career knowledge base by uploading an existing resume in any supported format (Markdown, PDF, TXT, DOCX). The system extracts structured information via LLM agents and presents it as reviewable candidate snippets.
+
+Supported input formats:
+- **Markdown** (`.md`): Direct text extraction, best results
+- **Plain text** (`.txt`): Direct text extraction
+- **PDF** (`.pdf`): Text extraction via PyPDF2/pdfplumber
+- **Word** (`.docx`): Text extraction via python-docx
 
 ```mermaid
 flowchart TD
-  Upload["Upload PDF Resume"] --> Extract["Extract Text from PDF"]
-  Extract --> Analyze["LLM Analyzer: Identify Sections and Entities"]
-  Analyze --> Candidates["Generate Candidate Snippets"]
-  Candidates --> Review["User Review: Select, Edit, Reject Snippets"]
-  Review --> Import["Import Selected Snippets into Knowledge Base"]
-  Import --> Embed["Create Embeddings for New Records"]
+  Upload["Upload Resume File\n(.md, .pdf, .txt, .docx)"] --> Validate["Validate File Type"]
+  Validate --> ExtractText["Extract Raw Text\n(format-specific parser)"]
+  ExtractText --> Orchestrator["ExtractionOrchestrator\n(invokes 7 agents in parallel)"]
+
+  Orchestrator --> ProfileAgent["Profile Extractor"]
+  Orchestrator --> ExperienceAgent["Experience Extractor"]
+  Orchestrator --> EducationAgent["Education Extractor"]
+  Orchestrator --> SkillsAgent["Skills Extractor"]
+  Orchestrator --> ProjectsAgent["Projects Extractor"]
+  Orchestrator --> CertAgent["Certifications Extractor"]
+  Orchestrator --> AchieveAgent["Achievements Extractor"]
+
+  ProfileAgent --> Merge["Merge & Deduplicate"]
+  ExperienceAgent --> Merge
+  EducationAgent --> Merge
+  SkillsAgent --> Merge
+  ProjectsAgent --> Merge
+  CertAgent --> Merge
+  AchieveAgent --> Merge
+
+  Merge --> Candidates["Create ResumeIngestionCandidate[]\n(with confidence labels)"]
+  Candidates --> Review["User Review UI\n(Accept / Edit / Reject)"]
+  Review --> Import["Import Service\n(creates Position, Skill, etc.)"]
+  Import --> Embed["Create Embeddings"]
   Import --> Vault["Sync Markdown Vault"]
 ```
 
 Workflow details:
 
-1. **PDF Text Extraction**: Extract raw text from the uploaded PDF. Preserve section boundaries where detectable.
-2. **LLM Analysis**: Pass the extracted text to an LLM with a structured output schema to identify candidate entities:
-   - Contact information (name, email, phone, location, links).
-   - Work experiences (company, title, dates, descriptions, tech stack).
-   - Projects (title, role, summary, skills, outcomes).
-   - Education (institution, degree, field, dates).
-   - Certifications (name, issuer, date).
-   - Skills (name, category, inferred proficiency).
-   - Achievements (description, metrics if detectable).
-3. **Candidate Snippets**: Each extracted item becomes a candidate snippet with a confidence label:
-   - `high_confidence`: clear, well-structured, unambiguous.
-   - `needs_review`: parsed but potentially incomplete or ambiguous.
-   - `low_confidence`: detected but may need significant user correction.
-4. **User Review**: Present candidates in a review UI. The user can:
-   - Accept a snippet as-is.
-   - Edit a snippet before accepting.
-   - Reject a snippet.
-   - Merge duplicate or overlapping snippets.
-5. **Import**: Accepted snippets are created as structured records (Position, Project, Skill, Education, Certification, Achievement) in the database. Rejected snippets are discarded.
-6. **Embed and Sync**: New records trigger embedding generation and Markdown vault sync, same as manual entry.
+1. **File Validation**: Check extension, MIME type, file size (< 10MB). Reject unsupported formats with clear error.
+2. **Text Extraction**: Format-specific extraction to normalized UTF-8 text. Preserve section boundaries where detectable.
+3. **LLM Extraction (parallel)**: Seven specialized extraction agents run concurrently. Each receives the full raw text and extracts its domain-specific entities. See [ADR 0003](adr/0003-llm-agent-extraction-strategy.md) for per-agent output schemas.
+4. **Merge & Deduplicate**: Combine results from all agents. Resolve overlapping extractions (e.g., skill mentioned in both Skills section and Experience section).
+5. **Candidate Snippets**: Each extracted item becomes a `ResumeIngestionCandidate` record with:
+   - `entity_type`: mapped to DB entity type
+   - `extracted_data`: full structured JSON from the agent
+   - `confidence`: `high` / `medium` / `low` / `needs_review`
+   - `status`: `pending` (awaiting user review)
+6. **User Review**: Present candidates grouped by entity type in the review UI (`/ingestion/[id]`). User can accept, edit, reject, or merge candidates.
+7. **Import**: Accepted candidates are created as structured records in the database. See `POST /api/ingestion/resume/{id}/import`.
+8. **Embed and Sync** (future): New records trigger embedding generation and Markdown vault sync.
+
+**Fallback behavior**: If LLM is unavailable, the system falls back to the rule-based `_parse_markdown_sections()` for Markdown/TXT files. PDF and DOCX without LLM return `status="processing"` with a message to try again when LLM is configured.
 
 ### JD Source Fetching
 

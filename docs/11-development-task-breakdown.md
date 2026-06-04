@@ -46,8 +46,19 @@ Tasks:
 6. Implement Education.
 7. Implement Certification.
 8. Implement Evidence.
-9. Implement PDF text extraction service.
-10. Implement resume PDF upload endpoint and LLM extraction pipeline (generates candidate snippets with confidence labels).
+9. Implement multi-format text extraction service (PDF, DOCX, MD, TXT).
+10. Implement LLM agent extraction pipeline (see ADR 0003 and docs/12-agent-pipeline-design.md):
+   10a. Create `app/agents/extraction/` package with base `ExtractionAgent` class.
+   10b. Implement 7 domain-specific extraction agents (Profile, Experience, Education, Skills, Projects, Certifications, Achievements).
+   10c. Create versioned prompt templates in `app/agents/prompts/extraction_prompts.py`.
+   10d. Create Pydantic output schemas in `app/schemas/extraction.py`.
+   10e. Implement `ExtractionOrchestrator` — parallel agent invocation with caching.
+   10f. Update `POST /api/ingestion/resume/upload` to use orchestrator instead of `_parse_markdown_sections()`.
+   10g. Add LLM fallback to rule-based parser when LLM is unavailable.
+   10h. Update `MockLLMClient` with extraction schema fixtures for testing.
+   10i. Add unit tests for each extraction agent with mock LLM.
+   10j. Add integration tests for full extraction pipeline.
+   10k. Add golden tests with fixture resumes and expected extraction outputs.
 11. Implement candidate snippet review API (list, accept, reject, edit).
 12. Implement candidate import into knowledge base (creates structured records, triggers embedding).
 
@@ -56,7 +67,12 @@ Acceptance:
 - CRUD endpoints work.
 - validation errors are consistent.
 - tests cover create/read/update/delete.
-- PDF resume can be uploaded, extracted, reviewed, and imported into the knowledge base.
+- Resume in any supported format (MD, PDF, TXT, DOCX) can be uploaded, LLM-extracted into candidates, reviewed, and imported into the knowledge base.
+- Rule-based fallback works when LLM is unavailable.
+- Each extraction agent returns structured output matching its Pydantic schema.
+- Confidence labels are present and accurate.
+- All extraction agents have unit tests with mock LLM.
+- Golden tests pass with fixture resumes.
 
 ## Milestone 4 - Knowledge Retrieval
 
