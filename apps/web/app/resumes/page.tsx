@@ -28,17 +28,17 @@ export default function ResumeGeneratorPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold">Resume Generator</h1>
-        <p className="text-zinc-500 mt-1">Create a job-targeted resume</p>
+        <p className="text-slate-500 mt-1">Create a job-targeted resume</p>
       </div>
 
-      <div className="bg-white rounded-lg border border-zinc-200 p-6 space-y-4">
+      <div className="bg-slate-900 rounded-lg shadow-sm border border-slate-700 p-6 space-y-4">
         <h2 className="font-semibold">New Resume</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
-            placeholder="Resume title" className="border border-zinc-200 rounded px-3 py-2 text-sm" />
+            placeholder="Resume title" className="shadow-sm border border-slate-700 rounded px-3 py-2 text-sm" />
           <input type="text" value={targetRole} onChange={(e) => setTargetRole(e.target.value)}
-            placeholder="Target role" className="border border-zinc-200 rounded px-3 py-2 text-sm" />
-          <select value={jdId} onChange={(e) => setJdId(e.target.value)} className="border border-zinc-200 rounded px-3 py-2 text-sm">
+            placeholder="Target role" className="shadow-sm border border-slate-700 rounded px-3 py-2 text-sm" />
+          <select value={jdId} onChange={(e) => setJdId(e.target.value)} className="shadow-sm border border-slate-700 rounded px-3 py-2 text-sm">
             <option value="">Select JD (optional)</option>
             {jds?.items?.map((jd: JD) => (
               <option key={jd.id} value={jd.id}>{jd.title}</option>
@@ -52,31 +52,31 @@ export default function ResumeGeneratorPage() {
       </div>
 
       {(resumesError || jdsError) && (
-        <div className="bg-red-50 text-red-700 text-sm p-3 rounded border border-red-200">
+        <div className="bg-red-950 text-red-400 text-sm p-3 rounded border border-red-800">
           Failed to load data. Check that the API is running.
         </div>
       )}
 
-      <div className="bg-white rounded-lg border border-zinc-200 p-6">
+      <div className="bg-slate-900 rounded-lg shadow-sm border border-slate-700 p-6">
         <h2 className="font-semibold mb-4">Your Resumes</h2>
         {resumesError ? (
-          <p className="text-sm text-red-600">Failed to load resumes</p>
+          <p className="text-sm text-red-400">Failed to load resumes</p>
         ) : resumes?.items?.length ? (
           <ul className="space-y-3">
             {resumes.items.map((r: Resume) => (
-              <li key={r.id} className="flex justify-between items-center border-b border-zinc-100 pb-2">
+              <li key={r.id} className="flex justify-between items-center border-b border-slate-800 pb-2">
                 <div>
                   <p className="font-medium text-sm">{r.title}</p>
-                  <p className="text-xs text-zinc-500">{r.target_role} &middot; {new Date(r.created_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-slate-500">{r.target_role} &middot; {new Date(r.created_at).toLocaleDateString()}</p>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded ${r.status === "approved" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+                <span className={`text-xs px-2 py-0.5 rounded ${r.status === "approved" ? "bg-green-900 text-green-400" : "bg-yellow-900 text-yellow-400"}`}>
                   {r.status}
                 </span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-zinc-400">No resumes yet.</p>
+          <p className="text-sm text-slate-500">No resumes yet.</p>
         )}
       </div>
     </div>

@@ -44,11 +44,11 @@ export default function JDAnalyzerPage() {
       <h1 className="text-2xl font-bold">JD Analyzer</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg border border-zinc-200 p-6 space-y-4">
+        <div className="bg-slate-900 rounded-lg shadow-sm border border-slate-700 p-6 space-y-4">
           <h2 className="font-semibold">Paste Job Description</h2>
           <textarea rows={8} value={rawText} onChange={(e) => setRawText(e.target.value)}
             placeholder="Paste the full job description here..."
-            className="w-full border border-zinc-200 rounded px-3 py-2 text-sm" />
+            className="w-full shadow-sm border border-slate-700 rounded px-3 py-2 text-sm" />
           <button onClick={handlePaste} disabled={loading || !rawText}
             className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">
             {loading ? "Processing..." : "Analyze JD"}
@@ -56,29 +56,29 @@ export default function JDAnalyzerPage() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-white rounded-lg border border-zinc-200 p-6 space-y-4">
+          <div className="bg-slate-900 rounded-lg shadow-sm border border-slate-700 p-6 space-y-4">
             <h2 className="font-semibold">Fetch from URL</h2>
             <input type="url" value={url} onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.com/job-posting"
-              className="w-full border border-zinc-200 rounded px-3 py-2 text-sm" />
+              className="w-full shadow-sm border border-slate-700 rounded px-3 py-2 text-sm" />
             <button onClick={handleURLFetch} disabled={loading || !url}
               className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">
               Fetch & Analyze
             </button>
           </div>
 
-          <div className="bg-white rounded-lg border border-zinc-200 p-6 space-y-4">
+          <div className="bg-slate-900 rounded-lg shadow-sm border border-slate-700 p-6 space-y-4">
             <h2 className="font-semibold">Upload Markdown File</h2>
             <input type="file" accept=".md" onChange={handleMDUpload} className="text-sm" />
           </div>
         </div>
       </div>
 
-      {error && <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded text-sm">{error}</div>}
+      {error && <div className="bg-red-950 border border-red-800 text-red-400 p-4 rounded text-sm">{error}</div>}
       {result && (
-        <div className="bg-white rounded-lg border border-zinc-200 p-6">
+        <div className="bg-slate-900 rounded-lg shadow-sm border border-slate-700 p-6">
           <h2 className="font-semibold mb-4">JD Analysis Result</h2>
-          <pre className="text-xs text-zinc-600 whitespace-pre-wrap">{JSON.stringify(result, null, 2)}</pre>
+          <pre className="text-xs text-slate-600 whitespace-pre-wrap">{JSON.stringify(result, null, 2)}</pre>
         </div>
       )}
     </div>

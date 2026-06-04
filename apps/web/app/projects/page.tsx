@@ -71,27 +71,27 @@ export default function ProjectsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Projects</h1>
-          <p className="text-zinc-500 mt-1">Reusable resume building blocks</p>
+          <p className="text-slate-500 mt-1">Reusable resume building blocks</p>
         </div>
         <button onClick={() => { setEditingId(null); reset(); setShowForm(true); }}
-          className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 transition-colors">
+          className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-500 transition-colors">
           New Project
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-50 text-red-700 text-sm p-3 rounded border border-red-200">
+        <div className="bg-red-950 text-red-400 text-sm p-3 rounded border border-red-800">
           Failed to load projects: {error.message}
         </div>
       )}
 
       {showForm && (
-        <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-lg border border-zinc-200 p-6 space-y-3">
+        <form onSubmit={handleSubmit(onSubmit)} className="bg-slate-900 rounded-lg shadow-sm border border-slate-700 p-6 space-y-3">
           <h2 className="font-semibold">{editingId ? "Edit Project" : "New Project"}</h2>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <input {...register("title")} placeholder="Title *" className={`border px-3 py-2 text-sm rounded w-full ${errors.title ? "border-red-400" : ""}`} />
-              {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
+              <input {...register("title")} placeholder="Title *" className={`border px-3 py-2 text-sm rounded w-full ${errors.title ? "border-red-500" : ""}`} />
+              {errors.title && <p className="text-red-400 text-xs mt-1">{errors.title.message}</p>}
             </div>
             <input {...register("organization")} placeholder="Organization" className="border px-3 py-2 text-sm rounded" />
             <input {...register("role")} placeholder="Role" className="border px-3 py-2 text-sm rounded" />
@@ -101,7 +101,7 @@ export default function ProjectsPage() {
           </div>
           <textarea {...register("summary")} rows={3} placeholder="Summary" className="w-full border px-3 py-2 text-sm rounded" />
           {createMutation.isError && (
-            <p className="text-red-500 text-sm">Save failed: {createMutation.error.message}</p>
+            <p className="text-red-400 text-sm">Save failed: {createMutation.error.message}</p>
           )}
           <div className="flex gap-2">
             <button type="submit" disabled={createMutation.isPending}
@@ -109,45 +109,45 @@ export default function ProjectsPage() {
               {createMutation.isPending && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
               {createMutation.isPending ? "Saving..." : editingId ? "Update" : "Save"}
             </button>
-            <button type="button" onClick={closeForm} className="text-sm text-zinc-500 hover:text-zinc-700">Cancel</button>
+            <button type="button" onClick={closeForm} className="text-sm text-slate-500 hover:text-slate-300">Cancel</button>
           </div>
         </form>
       )}
 
-      <div className="bg-white rounded-lg border border-zinc-200 p-6">
-        {isLoading ? <p className="text-zinc-400 text-sm">Loading...</p> :
+      <div className="bg-slate-900 rounded-lg shadow-sm border border-slate-700 p-6">
+        {isLoading ? <p className="text-slate-500 text-sm">Loading...</p> :
           data?.items?.length ? (
             <ul className="space-y-2">
               {data.items.map((p: Project) => (
-                <li key={p.id} className="flex items-center justify-between border-b border-zinc-100 pb-2 group">
-                  <button onClick={() => startEdit(p)} className="text-left flex-1 hover:bg-zinc-50 rounded px-2 py-1 -mx-2 transition-colors">
+                <li key={p.id} className="flex items-center justify-between border-b border-slate-800 pb-2 group">
+                  <button onClick={() => startEdit(p)} className="text-left flex-1 hover:bg-slate-950 rounded px-2 py-1 -mx-2 transition-colors">
                     <p className="font-medium text-sm">{p.title}</p>
-                    <p className="text-xs text-zinc-500">{p.role} at {p.organization} &middot; {p.domain}</p>
+                    <p className="text-xs text-slate-500">{p.role} at {p.organization} &middot; {p.domain}</p>
                   </button>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => startEdit(p)}
-                      className="text-xs text-blue-600 hover:bg-blue-50 px-2 py-1 rounded transition-colors">Edit</button>
+                      className="text-xs text-blue-400 hover:bg-blue-950 px-2 py-1 rounded transition-colors">Edit</button>
                     {deletingId === p.id ? (
-                      <span className="text-xs text-zinc-400 px-2">Delete?</span>
+                      <span className="text-xs text-slate-500 px-2">Delete?</span>
                     ) : (
                       <button onClick={() => setDeletingId(p.id)}
-                        className="text-xs text-red-500 hover:bg-red-50 px-2 py-1 rounded transition-colors">Delete</button>
+                        className="text-xs text-red-400 hover:bg-red-950 px-2 py-1 rounded transition-colors">Delete</button>
                     )}
                   </div>
                   {deletingId === p.id && (
                     <div className="flex items-center gap-1 ml-2">
                       <button onClick={() => deleteMutation.mutate(p.id)} disabled={deleteMutation.isPending}
-                        className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 disabled:opacity-50">
+                        className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-500 disabled:opacity-50">
                         {deleteMutation.isPending ? "..." : "Confirm"}
                       </button>
                       <button onClick={() => setDeletingId(null)}
-                        className="text-xs text-zinc-500 hover:bg-zinc-100 px-2 py-1 rounded">No</button>
+                        className="text-xs text-slate-500 hover:bg-slate-800 px-2 py-1 rounded">No</button>
                     </div>
                   )}
                 </li>
               ))}
             </ul>
-          ) : <p className="text-sm text-zinc-400">No projects yet.</p>
+          ) : <p className="text-sm text-slate-500">No projects yet.</p>
         }
       </div>
     </div>

@@ -39,19 +39,19 @@ export default function CareerProfilePage() {
     }
   };
 
-  if (!profile) return <p className="text-zinc-400">Loading...</p>;
+  if (!profile) return <p className="text-slate-500">Loading...</p>;
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold">Career Profile</h1>
-        <p className="text-zinc-500 mt-1">Manage your professional identity</p>
+        <p className="text-slate-500 mt-1">Manage your professional identity</p>
       </div>
 
-      <div className="bg-white rounded-lg border border-zinc-200 p-6 space-y-4">
+      <div className="bg-slate-900 rounded-lg shadow-sm border border-slate-700 p-6 space-y-4">
         <div className="flex justify-between items-center">
           <h2 className="font-semibold">Personal Information</h2>
-          <button onClick={() => setEditing(!editing)} className="text-sm text-blue-600 hover:underline">
+          <button onClick={() => setEditing(!editing)} className="text-sm text-blue-400 hover:underline">
             {editing ? "Cancel" : "Edit"}
           </button>
         </div>
@@ -62,13 +62,13 @@ export default function CareerProfilePage() {
               <input key={field} type="text" placeholder={field.replace(/_/g, " ")}
                 value={form[field] || (profile as unknown as Record<string, string>)[field] || ""}
                 onChange={(e) => setForm({ ...form, [field]: e.target.value })}
-                className="w-full border border-zinc-200 rounded px-3 py-2 text-sm"
+                className="w-full shadow-sm border border-slate-700 rounded px-3 py-2 text-sm"
               />
             ))}
             <textarea placeholder="Default summary" rows={4}
               value={form.default_summary || profile.default_summary || ""}
               onChange={(e) => setForm({ ...form, default_summary: e.target.value })}
-              className="w-full border border-zinc-200 rounded px-3 py-2 text-sm"
+              className="w-full shadow-sm border border-slate-700 rounded px-3 py-2 text-sm"
             />
             <button onClick={handleSave} disabled={mutation.isPending}
               className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">
@@ -76,27 +76,27 @@ export default function CareerProfilePage() {
             </button>
           </div>
         ) : (
-          <div className="space-y-2 text-sm text-zinc-600">
-            <p><span className="font-medium text-zinc-800">Name:</span> {profile.full_name || <span className="text-zinc-300">Not set</span>}</p>
-            <p><span className="font-medium text-zinc-800">Headline:</span> {profile.headline || <span className="text-zinc-300">Not set</span>}</p>
-            <p><span className="font-medium text-zinc-800">Location:</span> {profile.location || <span className="text-zinc-300">Not set</span>}</p>
-            <p><span className="font-medium text-zinc-800">Email:</span> {profile.email || <span className="text-zinc-300">Not set</span>}</p>
-            <p><span className="font-medium text-zinc-800">Phone:</span> {profile.phone || <span className="text-zinc-300">Not set</span>}</p>
+          <div className="space-y-2 text-sm text-slate-600">
+            <p><span className="font-medium text-slate-700">Name:</span> {profile.full_name || <span className="text-slate-500 italic">Not set</span>}</p>
+            <p><span className="font-medium text-slate-700">Headline:</span> {profile.headline || <span className="text-slate-500 italic">Not set</span>}</p>
+            <p><span className="font-medium text-slate-700">Location:</span> {profile.location || <span className="text-slate-500 italic">Not set</span>}</p>
+            <p><span className="font-medium text-slate-700">Email:</span> {profile.email || <span className="text-slate-500 italic">Not set</span>}</p>
+            <p><span className="font-medium text-slate-700">Phone:</span> {profile.phone || <span className="text-slate-500 italic">Not set</span>}</p>
           </div>
         )}
       </div>
 
-      <div className="bg-white rounded-lg border border-zinc-200 p-6 space-y-4">
+      <div className="bg-slate-900 rounded-lg shadow-sm border border-slate-700 p-6 space-y-4">
         <h2 className="font-semibold">Import from Existing Resume</h2>
-        <p className="text-sm text-zinc-500">Upload a PDF resume to extract positions, skills, and education.</p>
+        <p className="text-sm text-slate-500">Upload a PDF resume to extract positions, skills, and education.</p>
         {uploadMessage && (
-          <div className={`text-sm p-3 rounded flex items-center justify-between ${uploadMessage.type === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+          <div className={`text-sm p-3 rounded flex items-center justify-between ${uploadMessage.type === "success" ? "bg-green-950 text-green-400 border border-green-800" : "bg-red-950 text-red-400 border border-red-800"}`}>
             <span>{uploadMessage.text}</span>
-            <button onClick={() => setUploadMessage(null)} className="ml-3 text-zinc-400 hover:text-zinc-600 font-bold">&times;</button>
+            <button onClick={() => setUploadMessage(null)} className="ml-3 text-slate-500 hover:text-slate-300 font-bold">&times;</button>
           </div>
         )}
         <input type="file" accept=".pdf" onChange={handleUpload} disabled={uploading} className="text-sm" />
-        {uploading && <p className="text-sm text-blue-600">Uploading and analyzing...</p>}
+        {uploading && <p className="text-sm text-blue-400">Uploading and analyzing...</p>}
       </div>
     </div>
   );
