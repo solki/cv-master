@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
 import NavSidebar from "@/components/nav-sidebar";
+import ErrorBoundary from "@/components/error-boundary";
 
 export const metadata: Metadata = {
   title: "CV Master",
@@ -15,7 +16,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           <div className="flex min-h-screen">
             <NavSidebar />
-            <main className="flex-1 p-6 max-w-7xl">{children}</main>
+            <ErrorBoundary>
+              <main className="flex-1 p-6 max-w-7xl">{children}</main>
+            </ErrorBoundary>
           </div>
         </Providers>
       </body>
