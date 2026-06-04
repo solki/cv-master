@@ -17,14 +17,25 @@ async def get_export_status(export_id: str):
 
 @router.get("/{export_id}/download")
 async def download_export(export_id: str, db: AsyncSession = Depends(get_db)):
-    """Download a generated export file."""
-    parts = export_id.split("_")
-    if len(parts) < 3:
-        raise HTTPException(status_code=400, detail="Invalid export ID")
+    """Download a generated export file.
 
-    fmt = parts[-1]
-    # export_id format: export_{version_id}_{format}
-    version_id = export_id[len("export_"):-len(f"_{fmt}")]
+    Export ID format: export_{version_id}:{format}
+    The colon delimiter is safe because version_id is a UUID (no colons).
+    """
+    if not export_id.startswith("export_"):
+        raise HTTPException(status_code=400, detail="Invalid export ID format")
+
+    # Split on the LAST colon to extract format
+    rest = export_id[len("export_"):]
+    if ":" not in rest:
+        raise HTTPException(status_code=400, detail="Invalid export ID: missing format delimiter")
+
+    last_colon = rest.rfind(":")
+    version_id = rest[:last_colon]
+    fmt = rest[last_colon + 1:]
+
+    if not version_id or not fmt:
+        raise HTTPException(status_code=400, detail="Invalid export ID")
 
     from app.services.crud import BaseCRUD
     crud = BaseCRUD(ResumeVersion)
