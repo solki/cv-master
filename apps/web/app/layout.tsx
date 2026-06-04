@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="flex min-h-screen">
             <NavSidebar />
             <ErrorBoundary>
-              <main className="flex-1 p-6 max-w-7xl">{children}</main>
+              <main id="main-content" className="flex-1 p-6 max-w-5xl">{children}</main>
             </ErrorBoundary>
           </div>
         </Providers>
