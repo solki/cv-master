@@ -33,9 +33,9 @@ export default function ResumeLibraryPage() {
               </thead>
               <tbody>
                 {data.items.map((r: Resume) => (
-                  <tr key={r.id} className="border-b border-slate-50">
-                    <td className="py-2 font-medium">{r.title}</td>
-                    <td className="py-2 text-slate-600">{r.target_role}</td>
+                  <tr key={r.id} className="border-b border-slate-800">
+                    <td className="py-2 font-medium text-slate-200">{r.title}</td>
+                    <td className="py-2 text-slate-400">{r.target_role}</td>
                     <td className="py-2">
                       <span className={`text-xs px-2 py-0.5 rounded ${r.status === "approved" ? "bg-green-900 text-green-400" : "bg-yellow-900 text-yellow-400"}`}>
                         {r.status}

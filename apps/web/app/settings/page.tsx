@@ -52,7 +52,7 @@ function StatusCard({ title, status, children }: { title: string; status: string
     green: "bg-green-950 border-green-800", red: "bg-red-950 border-red-800", yellow: "bg-yellow-950 border-yellow-800",
   };
   const dotMap: Record<string, string> = {
-    green: "bg-green-9500", red: "bg-red-9500", yellow: "bg-yellow-9500",
+    green: "bg-green-500", red: "bg-red-500", yellow: "bg-yellow-500",
   };
   return (
     <div className={`rounded-lg border p-6 space-y-3 ${colorMap[color] || colorMap.yellow}`}>
