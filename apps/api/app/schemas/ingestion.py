@@ -10,6 +10,7 @@ class ResumeIngestionCreate(BaseModel):
 class ResumeUploadResponse(BaseModel):
     ingestion_id: str
     status: str
+    candidate_count: int = 0
 
 
 class CandidateResponse(BaseModel):

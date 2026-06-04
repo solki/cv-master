@@ -26,6 +26,7 @@ export default function CareerProfilePage() {
   }, [profile]);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [uploadResult, setUploadResult] = useState<{ ingestion_id: string; status: string; candidate_count: number } | null>(null);
 
   const mutation = useMutation({
     mutationFn: (data: Record<string, string>) => api.put<Profile>("/api/profile", data),
@@ -41,10 +42,10 @@ export default function CareerProfilePage() {
     setUploading(true);
     setUploadMessage(null);
     try {
-      const result = await api.uploadFile<{ ingestion_id: string; status: string }>("/api/ingestion/resume/upload", file);
-      setUploadMessage({ type: "success", text: `Resume uploaded! Ingestion ID: ${result.ingestion_id}` });
+      const result = await api.uploadFile<{ ingestion_id: string; status: string; candidate_count: number }>("/api/ingestion/resume/upload", file);
+      setUploadMessage({ type: "success", text: `Resume uploaded! ${result.candidate_count || 0} candidates extracted.` });
+      setUploadResult(result);
       setTimeout(() => setUploadMessage(null), 8000);
-      // Reset file input
       e.target.value = "";
     } catch (err: unknown) {
       setUploadMessage({ type: "error", text: "Upload failed: " + (err instanceof Error ? err.message : "unknown error") });
@@ -102,17 +103,37 @@ export default function CareerProfilePage() {
         )}
       </div>
 
-      <div className="bg-slate-900 rounded-lg shadow-sm border border-slate-700 p-6 space-y-4">
-        <h2 className="font-semibold">Import from Existing Resume</h2>
-        <p className="text-sm text-slate-500">Upload a PDF resume to extract positions, skills, and education.</p>
+      <div className="bg-slate-900 rounded-lg border border-slate-700 p-6 space-y-4">
+        <h2 className="font-semibold text-slate-200">Import from Existing Resume</h2>
+        <p className="text-sm text-slate-400">Upload a resume file (.pdf, .docx, .md, .txt) to extract positions, skills, and education.</p>
         {uploadMessage && (
-          <div className={`text-sm p-3 rounded flex items-center justify-between ${uploadMessage.type === "success" ? "bg-green-950 text-green-400 border border-green-800" : "bg-red-950 text-red-400 border border-red-800"}`}>
+          <div className={`text-sm p-3 rounded flex items-center justify-between ${uploadMessage.type === "success" ? "bg-emerald-950 text-emerald-400 border border-emerald-800" : "bg-red-950 text-red-400 border border-red-800"}`}>
             <span>{uploadMessage.text}</span>
             <button onClick={() => setUploadMessage(null)} className="ml-3 text-slate-500 hover:text-slate-300 font-bold">&times;</button>
           </div>
         )}
-        <input type="file" accept=".pdf" onChange={handleUpload} disabled={uploading} className="text-sm" />
-        {uploading && <p className="text-sm text-blue-400">Uploading and analyzing...</p>}
+        <input type="file" accept=".pdf,.docx,.md,.txt" onChange={handleUpload} disabled={uploading} className="text-sm text-slate-300" />
+        {uploading && (
+          <div className="flex items-center gap-3 text-sm text-blue-400">
+            <span className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+            Extracting and analyzing resume...
+          </div>
+        )}
+        {uploadResult && (
+          <div className="bg-slate-800 rounded p-4 space-y-2 text-sm">
+            <p className="text-slate-300">
+              <span className="text-emerald-400 font-medium">✓ Extraction complete</span>
+              {" — "}{uploadResult.candidate_count || 0} candidates found
+            </p>
+            <p className="text-slate-400 text-xs">Status: {uploadResult.status}</p>
+            <button
+              onClick={() => window.open(`/api/ingestion/resume/${uploadResult.ingestion_id}/candidates`, "_blank")}
+              className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              View candidates (API) →
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

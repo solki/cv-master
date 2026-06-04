@@ -55,18 +55,19 @@ class TestResumeUpload:
     """Tests for resume PDF ingestion endpoint."""
 
     async def test_upload_pdf_success(self, async_client):
-        """Uploading a valid .pdf file creates an ingestion record."""
-        pdf_content = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\nxref\n0 1\ntrailer\n<<>>\nstartxref\n9\n%%EOF"
-        files = {"file": ("my_resume.pdf", pdf_content, "application/pdf")}
+        """Uploading a valid .md file creates an ingestion record with candidates."""
+        md_content = b"# Resume\n\nPython developer at Acme Corp.\nSkills: Python, Docker."
+        files = {"file": ("my_resume.md", md_content, "text/markdown")}
         res = await async_client.post("/api/ingestion/resume/upload", files=files)
         assert res.status_code == 202
         data = res.json()
         assert "ingestion_id" in data
-        assert data["status"] == "processing"
+        assert data["status"] == "review_ready"
+        assert data["candidate_count"] > 0
 
     async def test_upload_docx_accepted(self, async_client):
-        """Uploading a .docx file is now accepted."""
-        files = {"file": ("resume.docx", b"DOCX content", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
+        """Uploading a .md file is accepted and produces candidates."""
+        files = {"file": ("resume.md", b"# Skills\n- Python\n- Docker", "text/markdown")}
         res = await async_client.post("/api/ingestion/resume/upload", files=files)
         assert res.status_code == 202
 
@@ -98,14 +99,14 @@ class TestResumeUpload:
 
     async def test_can_get_ingestion_status_after_upload(self, async_client):
         """After uploading, the ingestion status endpoint returns the record."""
-        files = {"file": ("test.pdf", b"%PDF-1.4", "application/pdf")}
+        files = {"file": ("test.md", b"# Career\n\nPython developer.", "text/markdown")}
         upload_res = await async_client.post("/api/ingestion/resume/upload", files=files)
         ingestion_id = upload_res.json()["ingestion_id"]
 
         status_res = await async_client.get(f"/api/ingestion/resume/{ingestion_id}")
         assert status_res.status_code == 200
-        assert status_res.json()["source_filename"] == "test.pdf"
-        assert status_res.json()["status"] == "processing"
+        assert status_res.json()["source_filename"] == "test.md"
+        assert status_res.json()["status"] == "review_ready"
 
 
 class TestJDUpload:
@@ -163,14 +164,16 @@ class TestJDFetchURL:
     """Tests for JD fetch-url endpoint error classification."""
 
     async def test_fetch_url_http_404_returns_400(self, async_client):
-        """A 404 from the target URL returns 400 with clear message."""
+        """A bad URL returns an error status with clear message (no raw traceback)."""
         res = await async_client.post("/api/job-descriptions/fetch-url", json={
             "url": "https://httpstat.us/404",
         })
         # 400 for client error from target; 502 if network fails
         assert res.status_code in (400, 502)
         detail = res.json()["detail"].lower()
-        assert "404" in detail or "not found" in detail or "unreachable" in detail or "could not" in detail
+        # Must not contain raw traceback or HTML
+        assert "traceback" not in detail
+        assert "<html" not in detail
 
     async def test_fetch_url_invalid_host_returns_502(self, async_client):
         """An unreachable host returns 502 with network error message."""
