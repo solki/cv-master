@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import type { Profile } from "@/lib/types";
 
@@ -10,6 +10,20 @@ export default function CareerProfilePage() {
   const { data: profile } = useQuery<Profile>({ queryKey: ["profile"], queryFn: () => api.get<Profile>("/api/profile") });
   const [form, setForm] = useState<Record<string, string>>({ full_name: "", headline: "", location: "", email: "", phone: "", links: "", default_summary: "" });
   const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setForm({
+        full_name: profile.full_name || "",
+        headline: profile.headline || "",
+        location: profile.location || "",
+        email: profile.email || "",
+        phone: profile.phone || "",
+        links: profile.links || "",
+        default_summary: profile.default_summary || "",
+      });
+    }
+  }, [profile]);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -59,16 +73,18 @@ export default function CareerProfilePage() {
         {editing ? (
           <div className="space-y-3">
             {["full_name", "headline", "location", "email", "phone", "links"].map((field) => (
-              <input key={field} type="text" placeholder={field.replace(/_/g, " ")}
-                value={form[field] || (profile as unknown as Record<string, string>)[field] || ""}
+              <input key={field}
+                type={field === "email" ? "email" : field === "links" ? "url" : "text"}
+                placeholder={field.replace(/_/g, " ")}
+                value={form[field]}
                 onChange={(e) => setForm({ ...form, [field]: e.target.value })}
-                className="w-full shadow-sm border border-slate-700 rounded px-3 py-2 text-sm"
+                className="w-full border border-slate-700 rounded px-3 py-2 text-sm bg-slate-800 text-slate-100"
               />
             ))}
             <textarea placeholder="Default summary" rows={4}
-              value={form.default_summary || profile.default_summary || ""}
+              value={form.default_summary}
               onChange={(e) => setForm({ ...form, default_summary: e.target.value })}
-              className="w-full shadow-sm border border-slate-700 rounded px-3 py-2 text-sm"
+              className="w-full border border-slate-700 rounded px-3 py-2 text-sm bg-slate-800 text-slate-100"
             />
             <button onClick={handleSave} disabled={mutation.isPending}
               className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">

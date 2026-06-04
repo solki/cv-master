@@ -1,5 +1,7 @@
 # Agent Workflows
 
+> **Implementation Status (2026-06-04)**: The LangGraph workflow (`apps/api/app/agents/workflow.py`) is defined but **not yet wired** to Celery or any runtime. The `POST /api/resumes/{id}/generate` endpoint currently creates a minimal `ResumeVersion` with placeholder content as a synchronous fallback, which unblocks the export pipeline for MVP. Full agent-driven generation (JD analysis → retrieval → strategy → draft → ATS review → grounding) will be wired in a future phase when Celery task queue integration is complete.
+
 ## Workflow Principles
 
 - Workflows should be explicit graphs, not hidden prompt chains.

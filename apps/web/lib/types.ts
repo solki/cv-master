@@ -34,6 +34,12 @@ export interface Resume {
   job_description_id: string | null; created_at: string; updated_at: string;
 }
 
+export interface ResumeVersion {
+  id: string; resume_id: string; version_number: number;
+  content_json: string; markdown: string; html: string;
+  ats_score: number | null; review_notes: string; created_at: string;
+}
+
 export interface JD {
   id: string; title: string; company: string; raw_text: string;
   source_url: string; source_type: string; analysis: string;

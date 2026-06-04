@@ -48,8 +48,17 @@ async def fetch_jd_url(data: JDFetchURLRequest, db: AsyncSession = Depends(get_d
             response.raise_for_status()
             soup = BeautifulSoup(response.text, "html.parser")
             raw_text = soup.get_text(separator="\n", strip=True)
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Target URL returned HTTP {e.response.status_code}. The page may not exist or may be inaccessible.",
+        )
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=502, detail="Request timed out while fetching the URL. The server may be unreachable.")
+    except httpx.ConnectError:
+        raise HTTPException(status_code=502, detail="Could not connect to the URL. Check that the address is correct and the server is reachable.")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to fetch URL: {str(e)}")
+        raise HTTPException(status_code=502, detail=f"Failed to fetch URL: {str(e)}")
 
     entity = await crud.create(db, JDCreate(
         raw_text=raw_text[:50000],

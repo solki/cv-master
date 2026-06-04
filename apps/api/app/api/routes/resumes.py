@@ -56,8 +56,42 @@ async def generate_resume(
     resume = await resume_crud.get(db, resume_id)
     if resume is None:
         raise HTTPException(status_code=404, detail="Resume not found")
+
+    # Count existing versions to determine version_number
+    from sqlalchemy import select, func
+    count_q = select(func.count()).select_from(ResumeVersion).where(
+        ResumeVersion.resume_id == resume_id
+    )
+    result = await db.execute(count_q)
+    existing_count = result.scalar() or 0
+
+    import json
+    placeholder_content = json.dumps({
+        "header": {"full_name": "", "email": "", "phone": "", "location": ""},
+        "summary": "",
+        "skills": [],
+        "experience": [],
+        "projects": [],
+        "education": [],
+        "certifications": [],
+    })
+
+    version = ResumeVersion(
+        resume_id=resume_id,
+        version_number=existing_count + 1,
+        content_json=placeholder_content,
+        markdown="",
+        html="",
+        ats_score=None,
+    )
+    db.add(version)
+    await db.flush()
+    await db.refresh(version)
+
     return ResumeGenerateResponse(
-        job_id=f"job_{resume_id}", resume_id=resume_id, status="queued"
+        job_id=f"job_{resume_id}",
+        resume_id=resume_id,
+        status="generated",
     )
 
 
@@ -113,4 +147,4 @@ async def request_export(
     version = await version_crud.get(db, version_id)
     if version is None:
         raise HTTPException(status_code=404, detail="Version not found")
-    return ExportResponse(export_id=f"export_{version_id}_{data.format}", status="queued")
+    return ExportResponse(export_id=f"export_{version_id}:{data.format}", status="queued")

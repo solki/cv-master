@@ -42,6 +42,11 @@ Deliverables:
 - Hybrid retrieval service.
 - Profile completeness indicators.
 
+> **MVP Status (2026-06-04)**: CRUD APIs exist for all entities including positions (`/api/positions`).
+> The frontend currently has UI pages for Profile, Projects, Evidence but **not** a standalone Positions page.
+> Positions management is planned for a future sprint or integration into the Career Profile page.
+> Embedding generation and hybrid retrieval are stubbed — keyword search against entity tables is the current fallback (requires `embeddings` table population via Celery task, not yet wired).
+
 ## Phase 3: JD Analysis And Retrieval
 
 Goal: turn job descriptions into structured targeting plans.
