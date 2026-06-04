@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Resume, JD, PaginatedResponse } from "@/lib/types";
 
 export default function ResumeGeneratorPage() {
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [targetRole, setTargetRole] = useState("");
   const [jdId, setJdId] = useState("");
@@ -21,7 +22,13 @@ export default function ResumeGeneratorPage() {
 
   const createMutation = useMutation({
     mutationFn: () => api.post<Resume>("/api/resumes", { title, target_role: targetRole, job_description_id: jdId || null }),
-    onSuccess: () => { setTitle(""); setTargetRole(""); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["resumes"] });
+      queryClient.invalidateQueries({ queryKey: ["library-resumes"] });
+      setTitle("");
+      setTargetRole("");
+      setJdId("");
+    },
   });
 
   return (
@@ -46,7 +53,8 @@ export default function ResumeGeneratorPage() {
           </select>
         </div>
         <button onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !title}
-          className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">
+          className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50 inline-flex items-center gap-2">
+          {createMutation.isPending && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
           {createMutation.isPending ? "Creating..." : "Create Resume"}
         </button>
       </div>

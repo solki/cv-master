@@ -56,7 +56,7 @@ class TestSettings:
         assert status["configured"] is True
 
     def test_search_not_configured_by_default(self):
-        settings = Settings()
+        settings = Settings(TAVILY_API_KEY="")
         assert settings.search_configured() is False
 
     def test_search_configured_with_key(self):

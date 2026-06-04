@@ -158,7 +158,7 @@ export default function JDAnalyzerPage() {
           {/* CTA */}
           <div className="pt-2 border-t border-slate-800">
             <a
-              href="/resumes"
+              href={`/resumes?jd_id=${result.id}`}
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-500 transition-colors"
             >
               Generate Resume from this JD →
