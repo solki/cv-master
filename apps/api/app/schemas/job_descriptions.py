@@ -8,6 +8,7 @@ class JDCreate(BaseModel):
     raw_text: str = Field(default="")
     source_url: str = Field(default="", max_length=2000)
     source_type: str = Field(default="pasted", max_length=20)
+    source_filename: str = Field(default="", max_length=500)
 
 
 class JDFetchURLRequest(BaseModel):

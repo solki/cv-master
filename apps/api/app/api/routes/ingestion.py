@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.models.resume_ingestion import ResumeIngestion, ResumeIngestionCandidate
 from app.schemas.ingestion import (
+    ResumeIngestionCreate,
     ResumeUploadResponse,
     CandidateResponse,
     CandidateUpdateRequest,
@@ -15,12 +16,20 @@ router = APIRouter(prefix="/api/ingestion", tags=["ingestion"])
 ingestion_crud = BaseCRUD(ResumeIngestion)
 candidate_crud = BaseCRUD(ResumeIngestionCandidate)
 
+ALLOWED_RESUME_EXTENSIONS = {".pdf", ".docx", ".md", ".txt"}
+
 
 @router.post("/resume/upload", status_code=202)
 async def upload_resume_pdf(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
-    if not file.filename or not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are accepted")
-    ingestion = await ingestion_crud.create(db, ResumeIngestion(
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+    ext = file.filename.lower().rsplit(".", 1)[-1] if "." in file.filename else ""
+    if f".{ext}" not in ALLOWED_RESUME_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type '.{ext}'. Allowed: {', '.join(sorted(ALLOWED_RESUME_EXTENSIONS))}",
+        )
+    ingestion = await ingestion_crud.create(db, ResumeIngestionCreate(
         source_filename=file.filename,
         status="processing",
     ))

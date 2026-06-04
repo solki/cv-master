@@ -65,7 +65,8 @@ class TestSettings:
 
     def test_cors_origins_default(self):
         settings = Settings()
-        assert settings.CORS_ORIGINS == ["http://localhost:3000"]
+        assert "http://localhost:3000" in settings.CORS_ORIGINS
+        assert "http://127.0.0.1:3000" in settings.CORS_ORIGINS
 
     def test_app_env_default(self):
         settings = Settings()

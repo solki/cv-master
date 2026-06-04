@@ -34,7 +34,11 @@ export const api = {
     const formData = new FormData();
     formData.append("file", file);
     const res = await fetch(`${API_BASE}${path}`, { method: "POST", body: formData });
-    if (!res.ok) throw new Error(`Upload failed: ${res.statusText}`);
+    if (!res.ok) {
+      const error = await res.json().catch(() => null);
+      const message = error?.detail || error?.message || `Upload failed (HTTP ${res.status})`;
+      throw new Error(message);
+    }
     return res.json();
   },
 };

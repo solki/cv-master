@@ -61,19 +61,28 @@ async def fetch_jd_url(data: JDFetchURLRequest, db: AsyncSession = Depends(get_d
 
 @router.post("/upload-md", status_code=201)
 async def upload_jd_md(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
-    """Upload a Markdown JD file and create a JobDescription."""
-    if not file.filename or not file.filename.endswith(".md"):
-        raise HTTPException(status_code=400, detail="Only .md files are accepted")
-    content = await file.read()
-    raw_text = content.decode("utf-8", errors="replace")
+    """Upload a Markdown or text JD file and create a JobDescription."""
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+    ext = file.filename.lower().rsplit(".", 1)[-1] if "." in file.filename else ""
+    if ext not in ("md", "txt"):
+        raise HTTPException(status_code=400, detail=f"Unsupported file type '.{ext}'. Allowed: .md, .txt")
+    try:
+        content = await file.read()
+        raw_text = content.decode("utf-8", errors="replace")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read file: {str(e)}")
+
+    if not raw_text.strip():
+        raise HTTPException(status_code=400, detail="File is empty")
 
     entity = await crud.create(db, JDCreate(
+        title=file.filename,
         raw_text=raw_text[:50000],
         source_type="md_upload",
-        source_url="",
+        source_filename=file.filename,
     ))
-    entity.source_filename = file.filename
-    await db.flush()
+    await db.refresh(entity)
     return JDResponse.model_validate(entity)
 
 

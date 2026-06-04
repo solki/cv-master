@@ -2,6 +2,11 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 
+class ResumeIngestionCreate(BaseModel):
+    source_filename: str = Field(default="")
+    status: str = Field(default="processing")
+
+
 class ResumeUploadResponse(BaseModel):
     ingestion_id: str
     status: str

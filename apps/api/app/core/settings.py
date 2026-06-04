@@ -12,7 +12,10 @@ class Settings(BaseSettings):
     # Application
     APP_ENV: Literal["development", "production"] = "development"
     LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
-    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
 
     # LLM Provider
     LLM_PROVIDER: Literal["openai_compatible", "openai", "anthropic", "ollama"] = "openai_compatible"
