@@ -8,6 +8,9 @@ from alembic import context
 from app.db.base import Base
 from app.core.settings import get_settings
 
+# Import all models so Base.metadata is populated for autogenerate
+import app.models  # noqa: F401
+
 settings = get_settings()
 
 config = context.config
