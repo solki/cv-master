@@ -3,6 +3,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import NavSidebar from "@/components/nav-sidebar";
 import ErrorBoundary from "@/components/error-boundary";
+import { ToastContainer } from "@/components/ui/toast";
 
 export const metadata: Metadata = {
   title: "CV Master",
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <main id="main-content" className="flex-1 p-6 max-w-5xl">{children}</main>
             </ErrorBoundary>
           </div>
+          <ToastContainer />
         </Providers>
       </body>
     </html>
