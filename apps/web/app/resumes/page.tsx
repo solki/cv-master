@@ -10,11 +10,11 @@ export default function ResumeGeneratorPage() {
   const [targetRole, setTargetRole] = useState("");
   const [jdId, setJdId] = useState("");
 
-  const { data: resumes } = useQuery<PaginatedResponse<Resume>>({
+  const { data: resumes, error: resumesError } = useQuery<PaginatedResponse<Resume>>({
     queryKey: ["resumes"],
     queryFn: () => api.get<PaginatedResponse<Resume>>("/api/resumes?limit=10"),
   });
-  const { data: jds } = useQuery<PaginatedResponse<JD>>({
+  const { data: jds, error: jdsError } = useQuery<PaginatedResponse<JD>>({
     queryKey: ["jds"],
     queryFn: () => api.get<PaginatedResponse<JD>>("/api/job-descriptions?limit=20"),
   });
@@ -51,9 +51,17 @@ export default function ResumeGeneratorPage() {
         </button>
       </div>
 
+      {(resumesError || jdsError) && (
+        <div className="bg-red-50 text-red-700 text-sm p-3 rounded border border-red-200">
+          Failed to load data. Check that the API is running.
+        </div>
+      )}
+
       <div className="bg-white rounded-lg border border-zinc-200 p-6">
         <h2 className="font-semibold mb-4">Your Resumes</h2>
-        {resumes?.items?.length ? (
+        {resumesError ? (
+          <p className="text-sm text-red-600">Failed to load resumes</p>
+        ) : resumes?.items?.length ? (
           <ul className="space-y-3">
             {resumes.items.map((r: Resume) => (
               <li key={r.id} className="flex justify-between items-center border-b border-zinc-100 pb-2">

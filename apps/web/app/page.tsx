@@ -5,12 +5,12 @@ import { api } from "@/lib/api";
 import type { Profile, PaginatedResponse, Resume } from "@/lib/types";
 
 export default function DashboardPage() {
-  const { data: profile } = useQuery<Profile>({
+  const { data: profile, error: profileError } = useQuery<Profile>({
     queryKey: ["profile"],
     queryFn: () => api.get<Profile>("/api/profile"),
   });
 
-  const { data: resumes } = useQuery<PaginatedResponse<Resume>>({
+  const { data: resumes, error: resumesError } = useQuery<PaginatedResponse<Resume>>({
     queryKey: ["resumes"],
     queryFn: () => api.get<PaginatedResponse<Resume>>("/api/resumes?limit=5"),
   });
@@ -31,7 +31,9 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg border border-zinc-200 p-6">
           <h2 className="font-semibold mb-4">Profile Overview</h2>
-          {profile ? (
+          {profileError ? (
+            <p className="text-sm text-red-600">Failed to load profile</p>
+          ) : profile ? (
             <div className="space-y-2 text-sm text-zinc-600">
               <p><span className="font-medium">Name:</span> {profile.full_name || "Not set"}</p>
               <p><span className="font-medium">Headline:</span> {profile.headline || "Not set"}</p>
@@ -43,7 +45,9 @@ export default function DashboardPage() {
         </div>
         <div className="bg-white rounded-lg border border-zinc-200 p-6">
           <h2 className="font-semibold mb-4">Recent Resumes</h2>
-          {resumes?.items?.length ? (
+          {resumesError ? (
+            <p className="text-sm text-red-600">Failed to load resumes</p>
+          ) : resumes?.items?.length ? (
             <ul className="space-y-2">
               {resumes.items.map((r: Resume) => (
                 <li key={r.id} className="text-sm flex justify-between">

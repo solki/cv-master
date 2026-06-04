@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import type { Resume, PaginatedResponse } from "@/lib/types";
 
 export default function ResumeLibraryPage() {
-  const { data, isLoading } = useQuery<PaginatedResponse<Resume>>({
+  const { data, isLoading, error } = useQuery<PaginatedResponse<Resume>>({
     queryKey: ["library-resumes"],
     queryFn: () => api.get<PaginatedResponse<Resume>>("/api/resumes?limit=50"),
   });
@@ -18,7 +18,9 @@ export default function ResumeLibraryPage() {
       </div>
 
       <div className="bg-white rounded-lg border border-zinc-200 p-6">
-        {isLoading ? <p className="text-zinc-400 text-sm">Loading...</p> :
+        {error ? (
+          <p className="text-sm text-red-600">Failed to load resumes</p>
+        ) : isLoading ? <p className="text-zinc-400 text-sm">Loading...</p> :
           data?.items?.length ? (
             <table className="w-full text-sm">
               <thead>

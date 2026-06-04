@@ -5,8 +5,8 @@ import { api } from "@/lib/api";
 import type { HealthResponse, LLMHealthResponse } from "@/lib/types";
 
 export default function SettingsPage() {
-  const { data: health } = useQuery<HealthResponse>({ queryKey: ["health"], queryFn: () => api.get<HealthResponse>("/health") });
-  const { data: llmHealth } = useQuery<LLMHealthResponse>({ queryKey: ["llm-health"], queryFn: () => api.get<LLMHealthResponse>("/health/llm") });
+  const { data: health, error: healthError } = useQuery<HealthResponse>({ queryKey: ["health"], queryFn: () => api.get<HealthResponse>("/health") });
+  const { data: llmHealth, error: llmError } = useQuery<LLMHealthResponse>({ queryKey: ["llm-health"], queryFn: () => api.get<LLMHealthResponse>("/health/llm") });
 
   return (
     <div className="space-y-8">
@@ -15,12 +15,17 @@ export default function SettingsPage() {
         <p className="text-zinc-500 mt-1">System configuration and status</p>
       </div>
 
+      {(healthError || llmError) && (
+        <div className="bg-red-50 text-red-700 text-sm p-3 rounded border border-red-200">
+          Failed to load system status. Check that the API is running.
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <StatusCard title="System Health" status={health?.status === "ok" ? "healthy" : "error"}>
+        <StatusCard title="System Health" status={healthError ? "error" : health?.status === "ok" ? "healthy" : "error"}>
           <p className="text-sm text-zinc-600">Environment: {health?.environment || "N/A"}</p>
           <p className="text-sm text-zinc-600">Database: {health?.database?.status || "N/A"}</p>
         </StatusCard>
-        <StatusCard title="LLM Provider" status={llmHealth?.llm?.configured ? "configured" : "not configured"}>
+        <StatusCard title="LLM Provider" status={llmError ? "error" : llmHealth?.llm?.configured ? "configured" : "not configured"}>
           <p className="text-sm text-zinc-600">Provider: {llmHealth?.llm?.provider || "N/A"}</p>
           <p className="text-sm text-zinc-600">Search (Tavily): {llmHealth?.search?.configured ? "configured" : "not configured"}</p>
         </StatusCard>
