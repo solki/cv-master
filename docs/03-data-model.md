@@ -2,258 +2,270 @@
 
 ## Design Principles
 
-- Store career facts in structured tables.
-- Store AI-generated resume outputs separately from source facts.
-- Preserve evidence references for every important generated claim.
-- Support semantic search and keyword search.
-- Keep future profile scoping possible even though MVP is single-user.
+- Store career facts as structured records.
+- Keep generated resume content versioned.
+- Preserve evidence links between generated claims and source data.
+- Support semantic retrieval and keyword retrieval.
+- Avoid multi-user complexity in the MVP, but keep ownership fields easy to add later.
 
 ## Core Entities
 
-### CareerProfile
+### UserProfile
 
-Represents the user's overall career profile.
-
-Fields:
-
-- id
-- display_name
-- target_titles
-- location
-- contact_details
-- summary_notes
-- created_at
-- updated_at
-
-### WorkExperience
-
-Represents employment history.
+Represents the single user's professional identity.
 
 Fields:
 
-- id
-- profile_id
-- company
-- title
-- location
-- start_date
-- end_date
-- employment_type
-- description
-- technologies
-- source_confidence
+- `id`
+- `full_name`
+- `headline`
+- `location`
+- `email`
+- `phone`
+- `links`
+- `default_summary`
+- `created_at`
+- `updated_at`
+
+### Position
+
+Represents employment or professional role history.
+
+Fields:
+
+- `id`
+- `company`
+- `title`
+- `employment_type`
+- `location`
+- `start_date`
+- `end_date`
+- `is_current`
+- `description`
+- `tech_stack`
+- `source_note_id`
+- `created_at`
+- `updated_at`
 
 ### Project
 
-Represents professional, academic, open-source, or personal projects.
+Represents projects from work, open source, education, consulting, or personal work.
 
 Fields:
 
-- id
-- profile_id
-- work_experience_id nullable
-- name
-- role
-- domain
-- start_date
-- end_date
-- description
-- technologies
-- outcomes
-- metrics
-- links
-- source_confidence
+- `id`
+- `title`
+- `organization`
+- `role`
+- `summary`
+- `start_date`
+- `end_date`
+- `skills`
+- `tools`
+- `domain`
+- `impact`
+- `position_id`
+- `source_note_id`
+- `created_at`
+- `updated_at`
 
 ### Achievement
 
-Represents measurable career accomplishments.
+Represents quantifiable or qualitative outcomes.
 
 Fields:
 
-- id
-- profile_id
-- work_experience_id nullable
-- project_id nullable
-- statement
-- metric_value nullable
-- metric_unit nullable
-- impact_area
-- evidence_ids
-- source_confidence
+- `id`
+- `title`
+- `description`
+- `metric_name`
+- `metric_value`
+- `metric_unit`
+- `before_state`
+- `after_state`
+- `confidence`
+- `position_id`
+- `project_id`
+- `evidence_ids`
+- `created_at`
+- `updated_at`
 
 ### Skill
 
-Represents a skill or technology.
+Represents a skill, tool, technology, or domain capability.
 
 Fields:
 
-- id
-- profile_id
-- name
-- category
-- proficiency
-- years_used nullable
-- last_used_at nullable
-- aliases
+- `id`
+- `name`
+- `category`
+- `proficiency`
+- `years_experience`
+- `last_used_at`
+- `aliases`
+- `evidence_ids`
+- `created_at`
+- `updated_at`
 
 ### Education
 
-Represents education history.
-
 Fields:
 
-- id
-- profile_id
-- institution
-- degree
-- field
-- start_date
-- end_date
-- honors
-- notes
+- `id`
+- `institution`
+- `degree`
+- `field`
+- `start_date`
+- `end_date`
+- `location`
+- `details`
 
 ### Certification
 
-Represents certifications and credentials.
+Fields:
+
+- `id`
+- `name`
+- `issuer`
+- `issued_at`
+- `expires_at`
+- `credential_id`
+- `url`
+- `details`
+
+### Evidence
+
+Represents the grounding material for claims.
 
 Fields:
 
-- id
-- profile_id
-- name
-- issuer
-- issued_at
-- expires_at nullable
-- credential_id nullable
-- url nullable
+- `id`
+- `type`
+- `title`
+- `description`
+- `url`
+- `file_path`
+- `source_note_id`
+- `confidence`
+- `created_at`
+- `updated_at`
 
-### EvidenceItem
+Evidence types:
 
-Represents source material used to substantiate claims.
-
-Fields:
-
-- id
-- profile_id
-- type
-- title
-- content
-- url nullable
-- file_path nullable
-- related_entity_type
-- related_entity_id
-- confidence
-- created_at
+- `user_statement`
+- `document`
+- `portfolio_link`
+- `metric`
+- `manager_feedback`
+- `public_artifact`
+- `generated_suggestion`
 
 ### JobDescription
 
-Represents an input job description.
+Fields:
+
+- `id`
+- `title`
+- `company`
+- `raw_text`
+- `source_url`
+- `analysis`
+- `created_at`
+- `updated_at`
+
+### Resume
+
+Represents one resume generated for one target.
 
 Fields:
 
-- id
-- title
-- company nullable
-- raw_text
-- source_url nullable
-- parsed_requirements
-- ats_keywords
-- seniority
-- created_at
-
-### ResumeGenerationRun
-
-Represents one generation attempt.
-
-Fields:
-
-- id
-- profile_id
-- job_description_id
-- status
-- llm_provider
-- llm_model
-- prompt_version
-- strategy_json
-- selected_evidence_json
-- critique_json
-- error_message nullable
-- created_at
-- completed_at nullable
+- `id`
+- `job_description_id`
+- `title`
+- `target_role`
+- `strategy`
+- `status`
+- `created_at`
+- `updated_at`
 
 ### ResumeVersion
 
-Represents a saved resume output.
+Fields:
+
+- `id`
+- `resume_id`
+- `version_number`
+- `content_json`
+- `markdown`
+- `html`
+- `ats_score`
+- `review_notes`
+- `created_at`
+
+### ResumeBulletEvidence
+
+Links generated bullets to evidence records.
 
 Fields:
 
-- id
-- run_id
-- title
-- structured_document_json
-- markdown_content
-- html_content nullable
-- source_references_json
-- ats_score nullable
-- created_at
+- `id`
+- `resume_version_id`
+- `section`
+- `bullet_index`
+- `bullet_text`
+- `evidence_id`
+- `confidence`
 
-### ResumeTemplate
-
-Represents a template for rendering.
+### Embedding
 
 Fields:
 
-- id
-- name
-- format_type
-- ats_safe
-- template_path
-- style_config_json
-
-### EmbeddingRecord
-
-Represents searchable embeddings for entities and evidence.
-
-Fields:
-
-- id
-- profile_id
-- entity_type
-- entity_id
-- chunk_text
-- embedding
-- embedding_model
-- metadata_json
-- created_at
+- `id`
+- `entity_type`
+- `entity_id`
+- `text`
+- `embedding`
+- `embedding_model`
+- `created_at`
 
 ## Relationship Diagram
 
 ```mermaid
 erDiagram
-  CareerProfile ||--o{ WorkExperience : has
-  CareerProfile ||--o{ Project : has
-  CareerProfile ||--o{ Skill : has
-  CareerProfile ||--o{ Achievement : has
-  CareerProfile ||--o{ EvidenceItem : has
-  CareerProfile ||--o{ Education : has
-  CareerProfile ||--o{ Certification : has
-  CareerProfile ||--o{ ResumeGenerationRun : creates
-  WorkExperience ||--o{ Project : contains
-  WorkExperience ||--o{ Achievement : supports
+  UserProfile ||--o{ Position : owns
+  UserProfile ||--o{ Education : owns
+  UserProfile ||--o{ Certification : owns
+  Position ||--o{ Project : includes
+  Position ||--o{ Achievement : produces
   Project ||--o{ Achievement : produces
-  JobDescription ||--o{ ResumeGenerationRun : drives
-  ResumeGenerationRun ||--o{ ResumeVersion : produces
-  CareerProfile ||--o{ EmbeddingRecord : indexes
+  Evidence ||--o{ Achievement : supports
+  Evidence ||--o{ Skill : supports
+  JobDescription ||--o{ Resume : targets
+  Resume ||--o{ ResumeVersion : versions
+  ResumeVersion ||--o{ ResumeBulletEvidence : grounds
+  Evidence ||--o{ ResumeBulletEvidence : supports
 ```
 
-## Source Confidence
+## Retrieval Model
 
-Use confidence levels to help the agent avoid weak claims:
+Embeddable text should be generated for:
 
-- `verified`: user-confirmed or backed by strong evidence
-- `user_provided`: directly entered by the user
-- `inferred`: inferred by the system and pending user review
-- `draft`: generated suggestion only
+- Position descriptions.
+- Project summaries.
+- Achievements.
+- Skills with aliases and evidence.
+- STAR stories.
+- Evidence notes.
+- Job descriptions.
 
-Generated resumes should prefer `verified` and `user_provided` facts.
+Retrieval should combine:
 
+- Semantic similarity.
+- Keyword coverage.
+- Recency.
+- Evidence confidence.
+- Relevance to target seniority.
+
+## Future Multi-Profile Support
+
+For post-MVP evolution, add a `profile_id` foreign key to career entities and an `assistant_workspace_id` if the product becomes a broader personal career assistant. Do not add full SaaS tenancy in the MVP.

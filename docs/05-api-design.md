@@ -1,150 +1,197 @@
 # API Design
 
-## API Style
+## API Principles
 
-Use REST endpoints with JSON request and response bodies. Keep routes explicit and workflow-oriented.
+- Use REST for MVP simplicity.
+- Use JSON for request and response bodies.
+- Keep long-running work asynchronous through job endpoints.
+- Return stable IDs for all career facts and generated artifacts.
+- Keep schemas typed and documented through FastAPI OpenAPI output.
 
-## Health
+## API Areas
+
+### Health
 
 ```http
 GET /health
-GET /health/db
-GET /health/llm
 ```
 
-## Profiles
+Returns service health and dependency status.
+
+### Profile
 
 ```http
 GET /api/profile
 PUT /api/profile
 ```
 
-## Career Data
+### Positions
 
 ```http
-GET /api/work-experiences
-POST /api/work-experiences
-GET /api/work-experiences/{id}
-PUT /api/work-experiences/{id}
-DELETE /api/work-experiences/{id}
+GET /api/positions
+POST /api/positions
+GET /api/positions/{position_id}
+PUT /api/positions/{position_id}
+DELETE /api/positions/{position_id}
+```
 
+### Projects
+
+```http
 GET /api/projects
 POST /api/projects
-GET /api/projects/{id}
-PUT /api/projects/{id}
-DELETE /api/projects/{id}
+GET /api/projects/{project_id}
+PUT /api/projects/{project_id}
+DELETE /api/projects/{project_id}
+```
 
-GET /api/skills
-POST /api/skills
-PUT /api/skills/{id}
-DELETE /api/skills/{id}
+### Achievements
 
+```http
 GET /api/achievements
 POST /api/achievements
-PUT /api/achievements/{id}
-DELETE /api/achievements/{id}
+GET /api/achievements/{achievement_id}
+PUT /api/achievements/{achievement_id}
+DELETE /api/achievements/{achievement_id}
+```
 
+### Skills
+
+```http
+GET /api/skills
+POST /api/skills
+GET /api/skills/{skill_id}
+PUT /api/skills/{skill_id}
+DELETE /api/skills/{skill_id}
+```
+
+### Education And Certifications
+
+```http
 GET /api/education
 POST /api/education
-PUT /api/education/{id}
-DELETE /api/education/{id}
+PUT /api/education/{education_id}
+DELETE /api/education/{education_id}
 
 GET /api/certifications
 POST /api/certifications
-PUT /api/certifications/{id}
-DELETE /api/certifications/{id}
+PUT /api/certifications/{certification_id}
+DELETE /api/certifications/{certification_id}
 ```
 
-## Evidence
+### Evidence
 
 ```http
 GET /api/evidence
 POST /api/evidence
-GET /api/evidence/{id}
-PUT /api/evidence/{id}
-DELETE /api/evidence/{id}
-POST /api/evidence/{id}/embed
+GET /api/evidence/{evidence_id}
+PUT /api/evidence/{evidence_id}
+DELETE /api/evidence/{evidence_id}
 ```
 
-## Job Descriptions
+### Job Descriptions
 
 ```http
-POST /api/job-descriptions
 GET /api/job-descriptions
-GET /api/job-descriptions/{id}
-POST /api/job-descriptions/{id}/analyze
+POST /api/job-descriptions
+GET /api/job-descriptions/{job_description_id}
+POST /api/job-descriptions/{job_description_id}/analyze
 ```
 
-## Resume Generation
+The analyze endpoint should enqueue a job and return a job ID.
+
+### Retrieval
 
 ```http
-POST /api/resume-runs
-GET /api/resume-runs
-GET /api/resume-runs/{id}
-GET /api/resume-runs/{id}/events
-POST /api/resume-runs/{id}/cancel
+POST /api/retrieval/search
+POST /api/retrieval/profile-gap-analysis
 ```
 
-Example create request:
+Used by the frontend for previews and diagnostics.
+
+### Resumes
+
+```http
+GET /api/resumes
+POST /api/resumes
+GET /api/resumes/{resume_id}
+POST /api/resumes/{resume_id}/generate
+GET /api/resumes/{resume_id}/versions
+GET /api/resume-versions/{version_id}
+PUT /api/resume-versions/{version_id}
+POST /api/resume-versions/{version_id}/approve
+```
+
+### Exports
+
+```http
+POST /api/resume-versions/{version_id}/exports
+GET /api/exports/{export_id}
+GET /api/exports/{export_id}/download
+```
+
+Supported export formats:
+
+- `markdown`
+- `html`
+- `pdf`
+- `docx`
+
+### Jobs
+
+```http
+GET /api/jobs/{job_id}
+```
+
+Returns:
+
+- `queued`
+- `running`
+- `succeeded`
+- `failed`
+- `cancelled`
+
+## Example Resume Generate Request
 
 ```json
 {
-  "job_description_id": "uuid",
-  "target_format": ["pdf", "markdown", "html", "docx"],
-  "template_id": "ats-default",
-  "target_length": "one_page",
-  "tone": "professional",
-  "constraints": {
-    "avoid_unverified_metrics": true,
-    "prefer_recent_experience": true
-  }
+  "job_description_id": "jd_01H...",
+  "template_id": "ats_compact",
+  "target_format": "pdf",
+  "include_research": true,
+  "max_pages": 2
 }
 ```
 
-## Resume Versions And Exports
+## Example Resume Generate Response
 
-```http
-GET /api/resume-versions
-GET /api/resume-versions/{id}
-PUT /api/resume-versions/{id}
-POST /api/resume-versions/{id}/export
-GET /api/resume-versions/{id}/download/{format}
+```json
+{
+  "job_id": "job_01H...",
+  "resume_id": "resume_01H...",
+  "status": "queued"
+}
 ```
-
-## Vault
-
-```http
-GET /api/vault/files
-GET /api/vault/files/{path}
-PUT /api/vault/files/{path}
-POST /api/vault/sync
-```
-
-## Settings
-
-```http
-GET /api/settings/runtime
-GET /api/settings/providers
-POST /api/settings/providers/test
-```
-
-Provider settings should report configured status, not secret values.
 
 ## Error Model
 
-Use a consistent error response:
+Use a consistent error structure:
 
 ```json
 {
   "error": {
-    "code": "string",
-    "message": "string",
-    "details": {}
+    "code": "unsupported_claim",
+    "message": "The generated bullet contains a metric that is not supported by evidence.",
+    "details": {
+      "evidence_required": true
+    }
   }
 }
 ```
 
-## Streaming And Status
+## Future API Extensions
 
-Use server-sent events for generation progress in MVP. WebSockets can be added later if the personal assistant UI needs richer bidirectional interaction.
-
+- WebSocket or Server-Sent Events for live agent progress.
+- Authentication for private remote deployment.
+- Assistant conversation endpoints.
+- Job application tracker endpoints.

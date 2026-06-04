@@ -1,104 +1,118 @@
 # System Architecture
 
-## Architectural Style
+## Architectural Summary
 
-CV Master should use a modular monorepo architecture:
+CV Master is a local-first web application with a Python backend, a Next.js frontend, Postgres storage, and modular agent workflows.
 
-- Frontend web app for workflows and editing
-- Backend API for domain operations
-- Worker service for slow agent/export tasks
-- Postgres as the source of truth
-- Markdown vault as local-readable memory
-- Provider adapters for LLMs and search
+The MVP is single-user, but the architecture avoids assumptions that would prevent future evolution into a specialized personal career assistant.
 
 ## High-Level Diagram
 
 ```mermaid
 flowchart LR
-  Browser["Browser"] --> Web["Next.js App"]
-  Web --> API["FastAPI"]
-  API --> Services["Domain Services"]
-  Services --> DB["Postgres + pgvector"]
-  Services --> Vault["Markdown Vault"]
-  API --> Queue["Redis Queue"]
-  Queue --> Worker["Celery Worker"]
-  Worker --> Graph["LangGraph Workflows"]
-  Graph --> LLM["LLM Adapter"]
-  Graph --> Search["Search Adapter"]
-  Graph --> Export["Export Service"]
-  Export --> Files["Generated Files"]
-  Adminer["Adminer"] --> DB
+  User["User"] --> Web["Next.js Web App"]
+  Web --> API["FastAPI API"]
+  API --> DB[("Postgres + pgvector")]
+  API --> Redis[("Redis")]
+  API --> Worker["Celery Worker"]
+  Worker --> DB
+  Worker --> LLM["LLM Provider Adapter"]
+  Worker --> Search["Search Provider Adapter"]
+  LLM --> Cloud["OpenAI-compatible / OpenAI / Anthropic"]
+  LLM --> Ollama["Local Ollama"]
+  Search --> Tavily["Tavily API"]
+  API --> Export["Export Service"]
+  Export --> Files["Generated Artifacts"]
+  DB --> Adminer["Adminer"]
 ```
 
-## Backend Components
+## Backend
 
-### API Layer
+Use FastAPI as the HTTP API layer because it is a mature Python API framework with type-driven request validation and OpenAPI support.
 
-FastAPI exposes REST endpoints for career data, generation jobs, templates, exports, and settings. It should return typed Pydantic schemas and avoid leaking ORM models.
+Backend modules:
 
-### Domain Services
+- `api`: route definitions and dependency wiring.
+- `core`: settings, logging, security, errors.
+- `db`: SQLAlchemy sessions, migrations, repositories.
+- `models`: database models.
+- `schemas`: Pydantic request and response schemas.
+- `knowledge`: profile storage, vault sync, retrieval, embeddings.
+- `agents`: LangGraph workflows and agent state.
+- `llm`: provider adapters.
+- `search`: Tavily and future search adapters.
+- `exports`: Markdown, HTML, PDF, and Word generation.
+- `workers`: Celery tasks.
 
-Domain services contain business logic for profiles, experiences, projects, evidence, resumes, templates, retrieval, and exports. They should not depend directly on FastAPI request objects.
+## Agent Runtime
 
-### Agent Runtime
+Use LangGraph for workflow orchestration. The resume generation process has multiple stateful stages, review gates, and retry paths. LangGraph is a better fit than a single prompt chain because it supports explicit state transitions and future human-in-the-loop workflows.
 
-LangGraph coordinates resume generation workflows. Nodes should be deterministic where possible and should save intermediate outputs for auditability.
+## Database
 
-### Retrieval Engine
+Use Postgres with pgvector:
 
-Retrieval combines:
+- Relational data for career facts and resume versions.
+- Vector embeddings for semantic retrieval.
+- Full-text search for ATS keywords and exact phrase matching.
 
-- Postgres full-text search for exact terminology and ATS keywords
-- pgvector semantic search for related projects and achievements
-- metadata filters for dates, roles, industries, skills, and evidence confidence
-- reranking based on JD requirement priority
+## Background Jobs
 
-### Export Service
+Use Celery with Redis for:
 
-Export should render from a structured resume document model. Markdown is the canonical text draft; HTML, PDF, and DOCX are rendered from the structured model and template.
+- JD analysis.
+- Embedding generation.
+- Resume generation.
+- Export rendering.
+- External search calls.
 
-### Provider Adapters
+This keeps long-running agent work out of normal HTTP request timeouts.
 
-LLM and search integrations must be hidden behind internal interfaces. This keeps the app portable across cloud APIs and local Ollama.
+## Frontend
 
-## Database Choice
+Use Next.js with React and TypeScript:
 
-Use Postgres with pgvector. This keeps structured data, audit records, full-text search, and vector search in one database for the MVP.
+- App Router for page organization.
+- Tailwind CSS and shadcn/ui for a polished tool interface.
+- TanStack Query for API state.
+- Zustand for local UI state.
+- React Hook Form and Zod for complex forms.
 
-## Markdown Vault Choice
+## Export Pipeline
 
-The vault should contain readable career notes and generated artifacts. It is not a replacement for Postgres. The vault makes the system more local-first, portable, and compatible with tools such as Obsidian.
+The recommended export pipeline:
 
-## Async Work
+```mermaid
+flowchart TD
+  Draft["Approved Resume Draft"] --> MD["Markdown Renderer"]
+  Draft --> HTML["HTML Renderer"]
+  HTML --> PDF["PDF Renderer"]
+  Draft --> DOCX["Word Renderer"]
+  MD --> Artifacts["Artifact Store"]
+  HTML --> Artifacts
+  PDF --> Artifacts
+  DOCX --> Artifacts
+```
 
-Use Celery for:
+MVP implementation may use HTML as the styling source for PDF and Word exports, but the internal resume representation should stay format-independent.
 
-- embedding refresh
-- JD analysis
-- resume generation
-- export rendering
-- Tavily enrichment
-- batch vault sync
+## Local Deployment
 
-## Observability
+Docker Compose should include:
 
-MVP observability should include:
+- `api`
+- `web`
+- `worker`
+- `postgres`
+- `redis`
+- `adminer`
 
-- structured logs
-- generation run status
-- model/provider metadata
-- prompt version
-- token usage when available
-- task durations
-- export errors
+Adminer must be treated as a local development tool.
 
-## Evolution To Personal Career Assistant
+## References
 
-The architecture leaves room for phase 2:
-
-- Multiple agent workflows under one runtime
-- Long-term memory and knowledge graph expansion
-- Tool registry for career-specific tools
-- Optional desktop/local integrations
-- Profile scoping for future multi-profile support without SaaS-first design
-
+- FastAPI: https://fastapi.tiangolo.com/
+- LangGraph: https://docs.langchain.com/oss/python/langgraph
+- Next.js App Router: https://nextjs.org/docs/app
+- Celery: https://docs.celeryq.dev/en/stable/
+- Adminer: https://www.adminer.org/

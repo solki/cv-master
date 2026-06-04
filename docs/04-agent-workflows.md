@@ -2,150 +2,198 @@
 
 ## Workflow Principles
 
-- Every important claim should be grounded in stored evidence.
-- The agent should produce structured intermediate outputs.
-- The user should be able to inspect selected evidence and revise the result.
-- Generation should be retryable and auditable.
+- Workflows should be explicit graphs, not hidden prompt chains.
+- Each agent step should read and write typed state.
+- Claims must be grounded in source records.
+- The user must approve final content before export.
+- Provider selection must be outside workflow logic.
 
 ## Main Resume Generation Workflow
 
 ```mermaid
 flowchart TD
-  A["Create generation run"] --> B["Parse JD"]
-  B --> C["Extract requirements and ATS keywords"]
-  C --> D["Search career knowledge base"]
-  D --> E["Rank evidence and career facts"]
-  E --> F["Generate resume strategy"]
-  F --> G["Draft structured resume"]
-  G --> H["Critique and compliance check"]
-  H --> I{"Meets quality threshold?"}
-  I -- "No" --> J["Revise strategy or draft"]
-  J --> G
-  I -- "Yes" --> K["Render outputs"]
-  K --> L["Store resume version"]
-  L --> M["Return download links and evidence trace"]
+  Start["Start: JD + User Profile"] --> AnalyzeJD["Analyze JD"]
+  AnalyzeJD --> Research["Optional Company/Role Research"]
+  Research --> Retrieve["Retrieve Relevant Career Evidence"]
+  Retrieve --> Strategy["Create Resume Strategy"]
+  Strategy --> Draft["Draft Resume Sections"]
+  Draft --> ATSReview["ATS and Recruiter Review"]
+  ATSReview --> Grounding["Truthfulness and Evidence Check"]
+  Grounding --> NeedsFix{"Needs Revision?"}
+  NeedsFix -- yes --> Draft
+  NeedsFix -- no --> UserReview["User Review"]
+  UserReview --> Approved{"Approved?"}
+  Approved -- no --> Draft
+  Approved -- yes --> Export["Export Artifacts"]
 ```
 
-## LangGraph Nodes
+## Agent State
 
-### JD Analyzer
+The graph state should include:
 
-Inputs:
+- `job_description_id`
+- `jd_analysis`
+- `research_context`
+- `retrieved_items`
+- `resume_strategy`
+- `draft_resume`
+- `ats_review`
+- `grounding_review`
+- `user_edits`
+- `export_requests`
+- `errors`
 
-- raw job description
-- optional source URL
-- target role hints
+## Stage Details
+
+### 1. JD Analyzer
+
+Input:
+
+- Raw job description.
+- Optional source URL.
+
+Output:
+
+- Job title.
+- Seniority.
+- Required skills.
+- Preferred skills.
+- Responsibilities.
+- Domain keywords.
+- ATS keywords.
+- Company and role research queries.
+- Potential red flags.
+
+### 2. Research Step
+
+Input:
+
+- JD analysis.
+- User-enabled search flag.
+
+Tool:
+
+- Tavily search provider.
+
+Output:
+
+- Company context.
+- Product context.
+- Role-specific signals.
+- Market vocabulary.
+
+The MVP can make this step optional to reduce API usage.
+
+### 3. Retrieval Step
+
+Input:
+
+- JD analysis.
+- Career profile records.
+
+Output:
+
+- Ranked positions.
+- Ranked projects.
+- Ranked achievements.
+- Ranked skills.
+- Evidence records.
+- Coverage gaps.
+
+Retrieval must use both vector similarity and keyword matching.
+
+### 4. Resume Strategy Agent
+
+Output:
+
+- Target positioning.
+- Recommended template.
+- Section order.
+- Skills emphasis.
+- Experience emphasis.
+- Project inclusion/exclusion.
+- Keyword coverage plan.
+- Risks and weak evidence notes.
+
+### 5. Resume Writer Agent
+
+Output:
+
+- Header.
+- Summary.
+- Skills.
+- Experience.
+- Projects.
+- Education.
+- Certifications.
+- Optional extras.
+
+Every generated bullet should carry evidence IDs.
+
+### 6. ATS and Recruiter Review Agent
+
+Checks:
+
+- Parseable section titles.
+- Clear dates and titles.
+- Keyword coverage.
+- Overly dense wording.
+- Unsupported acronyms.
+- Repetition.
+- Excessive length.
+- Mismatch with target seniority.
+
+### 7. Grounding Review Agent
+
+Checks:
+
+- Unsupported claims.
+- Inflated metrics.
+- Timeline inconsistency.
+- Skills with no evidence.
+- Claims that should be user-confirmed.
+
+Output categories:
+
+- `pass`
+- `needs_user_confirmation`
+- `unsupported`
+- `contradiction`
+
+### 8. Export Step
+
+The export step only runs after user approval.
 
 Outputs:
 
-- role title
-- seniority
-- required skills
-- preferred skills
-- responsibilities
-- domain keywords
-- ATS keyword list
-- disqualifying gaps
+- Markdown.
+- HTML.
+- PDF.
+- Word document.
 
-### Retrieval Planner
+## Supporting Workflows
 
-Inputs:
+### Career Profile Ingestion
 
-- parsed JD
-- user profile
+```mermaid
+flowchart LR
+  Input["User Input / Note / File"] --> Parse["Parse and Normalize"]
+  Parse --> Confirm["User Confirmation"]
+  Confirm --> Store["Store Structured Records"]
+  Store --> Embed["Create Embeddings"]
+  Store --> Vault["Sync Markdown Vault"]
+```
 
-Outputs:
+### Profile Gap Analysis
 
-- search queries
-- filters
-- requirement weights
+The agent can compare a target JD against the user's profile and report:
 
-### Career Retriever
+- Strong matches.
+- Partial matches.
+- Missing skills.
+- Missing evidence.
+- Suggested projects or stories to add.
 
-Inputs:
+## Prompt Versioning
 
-- retrieval plan
-
-Outputs:
-
-- ranked experiences
-- ranked projects
-- ranked achievements
-- ranked skills
-- evidence references
-
-### Resume Strategist
-
-Inputs:
-
-- parsed JD
-- retrieval results
-
-Outputs:
-
-- target positioning
-- section order
-- skills emphasis
-- included/excluded experience rationale
-- risk mitigation notes
-
-### Resume Writer
-
-Inputs:
-
-- strategy
-- selected evidence
-- template constraints
-
-Outputs:
-
-- structured resume document
-- source references per section and bullet
-
-### Resume Critic
-
-Inputs:
-
-- structured resume
-- JD analysis
-- evidence references
-
-Outputs:
-
-- truthfulness findings
-- ATS keyword coverage
-- readability issues
-- repetition issues
-- missing evidence
-- revision instructions
-
-### Export Renderer
-
-Inputs:
-
-- structured resume
-- template
-- requested formats
-
-Outputs:
-
-- Markdown
-- HTML
-- PDF
-- DOCX
-
-## Quality Gates
-
-The workflow should block or warn when:
-
-- a claim has no evidence reference
-- dates conflict with stored career facts
-- a required skill is claimed but not present in the profile
-- generated content uses unsupported metrics
-- ATS keyword coverage is low
-- the resume is too long for the configured target length
-
-## Human Review
-
-The MVP should allow user review after generation. Future versions can support human-in-the-loop checkpoints before final export.
-
+Prompts should be stored as versioned templates. Prompt changes should be covered by regression tests against fixture career profiles and job descriptions.

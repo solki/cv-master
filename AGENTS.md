@@ -1,114 +1,84 @@
 # AGENTS.md
 
-This file is the operating guide for coding agents working on CV Master.
+This file is the handoff guide for coding agents working on CV Master. Read it before making changes.
 
 ## Project Mission
 
-CV Master is a local-first resume generation agent. Its MVP helps one user maintain a complete, auditable career knowledge base and generate ATS-friendly resumes tailored to a specific job description. The next phase should evolve toward a vertical personal assistant agent for career management, not a generic SaaS product.
+CV Master is a local-first personal career AI agent. The MVP helps one user maintain a structured career knowledge base and generate job-targeted resumes in PDF, Markdown, HTML, and Word formats.
 
-The system must optimize for:
+The system should optimize resumes for ATS and recruiter screening while preserving truthfulness, traceability, and user control. It must not fabricate career claims. Every strong resume claim should be grounded in stored career facts, projects, achievements, metrics, or evidence.
 
-- truthful, evidence-backed resume content
-- high compatibility with recruiter and ATS screening workflows
-- user ownership of career data
-- extensible agent workflows and provider-agnostic LLM integration
-- clean handoff between coding agents
+## Current Repository State
 
-## Current Project State
+As of this documentation pass, the repository contains planning documents only. There is no application code yet.
 
-This repository currently contains planning and architecture documentation only. There is no implemented application yet.
+Start with:
 
-Recommended first implementation milestone:
+- `README.md`
+- `docs/superpowers/specs/2026-06-04-cv-master-design.md`
+- `docs/01-product-requirements.md`
+- `docs/02-system-architecture.md`
+- `docs/03-data-model.md`
+- `docs/04-agent-workflows.md`
+- `docs/05-api-design.md`
+- `docs/06-frontend-plan.md`
+- `docs/07-deployment-config.md`
+- `docs/08-security-privacy.md`
+- `docs/09-testing-quality.md`
+- `docs/10-roadmap.md`
+- `docs/adr/0001-knowledge-base-architecture.md`
+- `docs/adr/0002-llm-provider-strategy.md`
 
-1. Create the monorepo structure.
-2. Implement Docker Compose for Postgres, Adminer, Redis, API, worker, and web.
-3. Implement backend settings and health checks.
-4. Add core database models and Alembic migrations.
-5. Implement the first resume generation workflow end to end with one ATS-safe template.
+## Git Workflow
 
-## Planned Stack
+Use git to make development reviewable and recoverable.
 
-Backend:
+Before making changes:
 
-- Python 3.12+
-- FastAPI
-- LangGraph
-- SQLAlchemy 2.x
-- Alembic
-- Pydantic and pydantic-settings
-- Celery + Redis
-- Postgres with pgvector
-- Tavily API for MVP web/search tooling
+1. Run `git status --short --branch`.
+2. Read the relevant docs and source files.
+3. Preserve user changes. Do not revert files you did not modify.
+4. Use a focused branch for implementation work when the task is larger than a small documentation edit.
 
-Frontend:
+While working:
 
-- Next.js + React + TypeScript
-- Tailwind CSS
-- shadcn/ui
-- TanStack Query
-- Zustand
-- React Hook Form + Zod
-- TipTap or another mature Markdown editor
+- Keep commits atomic and describe the product or technical change clearly.
+- Prefer one commit per coherent milestone: scaffold, data model, API slice, frontend slice, agent workflow, export feature, or test improvement.
+- Do not commit secrets, `.env`, generated private resumes, or personal evidence files.
+- Update docs in the same commit when architecture, commands, API contracts, or environment variables change.
 
-Document/export tooling:
+Before handing off:
 
-- Markdown as canonical generated resume draft format
-- HTML rendered from structured resume data/templates
-- PDF rendered from HTML, preferably with Playwright or WeasyPrint after prototype validation
-- DOCX rendered with a Python document library or Pandoc-compatible pipeline
+1. Run the relevant verification commands.
+2. Run `git status --short --branch`.
+3. Commit finished work unless the user explicitly asks not to.
+4. Summarize the commit hash, verification evidence, and remaining risks.
 
-## Repository Structure To Create
+## Required Architectural Direction
 
-Use this target structure unless an approved implementation plan changes it:
+Build the MVP as:
 
-```text
-cv_master/
-  AGENTS.md
-  README.md
-  docker-compose.yml
-  .env.example
-  apps/
-    api/
-      app/
-        api/
-        core/
-        db/
-        models/
-        schemas/
-        services/
-        agents/
-        workers/
-        templates/
-      alembic/
-      tests/
-      pyproject.toml
-    web/
-      app/
-      components/
-      lib/
-      stores/
-      styles/
-      tests/
-      package.json
-  docs/
-  vault/
-    career/
-    evidence/
-    generated/
-```
+- A single-user local/private application.
+- A backend API written primarily in Python.
+- A modular agent backend that can evolve into a vertical personal career assistant.
+- A frontend web app with a polished tool-oriented interface.
+- A Docker-based local deployment with Postgres and Adminer.
 
-## Environment Contract
+Use these core technologies unless there is a documented reason to change:
 
-The backend must select the active model provider through `LLM_PROVIDER`.
+- Backend API: FastAPI.
+- Agent orchestration: LangGraph.
+- ORM and migrations: SQLAlchemy 2 and Alembic.
+- Settings: Pydantic Settings.
+- Database: Postgres with pgvector.
+- Background jobs: Celery with Redis.
+- Frontend: Next.js, React, TypeScript, Tailwind CSS, shadcn/ui.
+- Search API: Tavily for MVP, behind an abstraction.
+- LLM access: provider adapters selected by `LLM_PROVIDER`.
 
-Required provider modes:
+## LLM Provider Requirements
 
-- `openai_compatible`
-- `openai`
-- `anthropic`
-- `ollama`
-
-Use these environment variables:
+The system must support at least these provider modes:
 
 ```env
 LLM_PROVIDER=openai_compatible
@@ -128,86 +98,121 @@ OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=
 
 TAVILY_API_KEY=
-
-DATABASE_URL=postgresql+asyncpg://cv_master:cv_master@postgres:5432/cv_master
-CELERY_BROKER_URL=redis://redis:6379/0
-CELERY_RESULT_BACKEND=redis://redis:6379/1
 ```
 
-Do not hard-code provider names, model names, API keys, or local paths.
+Provider code should be implemented through adapters. Do not scatter provider-specific conditionals across agent workflows.
 
-## Data Integrity Rules
+## Data and Knowledge Principles
 
-Resume generation must be evidence-backed.
+Postgres is the source of truth for career facts. Markdown files are a human-readable local knowledge layer, not the canonical database.
 
-- Every generated claim should trace to at least one stored career fact, project, experience, or evidence record.
-- The system should distinguish user-provided facts from AI-inferred phrasing.
-- The agent must not invent employers, titles, degrees, dates, metrics, certifications, or technologies.
-- If a useful metric is missing, the agent should ask the user to provide it or generate a clearly marked suggestion for user approval.
-- Store generated resume versions and their source evidence references.
+The knowledge system should include:
 
-## Architecture Principles
+- Structured entities for positions, projects, education, certifications, skills, achievements, evidence, resume versions, and job descriptions.
+- Markdown career notes that can be edited and searched.
+- Embeddings stored in pgvector.
+- PostgreSQL full-text search for ATS keywords and exact phrase matching.
+- Evidence IDs linked to generated resume bullets.
 
-- Keep the backend API, agent workflows, retrieval engine, export service, and provider adapters separate.
-- Treat Postgres as the source of truth for structured career data.
-- Treat the Markdown vault as a local-readable knowledge layer, not the only source of truth.
-- Use hybrid retrieval: semantic vector search plus keyword/full-text search.
-- Avoid framework lock-in inside domain services. LangGraph nodes should call plain service interfaces.
-- Design for one user in MVP, but leave room for account/profile scoping in phase 2.
-- Keep generated content reproducible: record prompt version, model provider, model name, input JD hash, selected evidence, and output format.
+Do not design the MVP around a generic chat memory store. Mem0-style memory may be added later as an assistant memory layer, but it should not replace the auditable career fact store.
 
-## Development Conventions
+## Agent Workflow Requirements
 
-- Prefer small modules with explicit interfaces.
-- Use typed Pydantic schemas for API inputs/outputs and LLM structured outputs.
-- Use Alembic for all schema changes.
-- Use async SQLAlchemy in FastAPI request paths.
-- Use Celery for long-running generation and export work.
-- Keep frontend pages focused on workflows, not marketing pages.
-- Do not add billing, multi-tenant SaaS features, or generic assistant capabilities in MVP unless explicitly requested.
+The resume generation workflow must include these stages:
 
-## Planned Command Contract After Implementation Starts
+1. Job description ingestion and analysis.
+2. Retrieval of relevant career facts, projects, skills, and achievements.
+3. Resume strategy planning.
+4. Section and bullet drafting.
+5. ATS keyword and readability review.
+6. Truthfulness and evidence grounding review.
+7. User review and editable finalization.
+8. Export to Markdown, HTML, PDF, and Word.
 
-Implement the project so these commands work, or update this section with the actual equivalents:
+Human review is required before final export. The agent may suggest stronger wording, but it must flag unsupported or weakly supported claims.
+
+## Security and Privacy Baseline
+
+Career data is sensitive. Implement with a local-first privacy posture:
+
+- Never log API keys.
+- Avoid storing raw prompts and model responses unless explicitly configured.
+- Mark sensitive data in logs and traces.
+- Keep Adminer bound to local development only.
+- Add authentication before any non-local deployment.
+- Make provider choice explicit to the user because cloud LLM calls send career data and job descriptions to third-party providers.
+
+## Suggested Initial Repository Layout
+
+Use this layout when implementation begins:
+
+```text
+apps/
+  api/
+    app/
+      api/
+      agents/
+      core/
+      db/
+      exports/
+      knowledge/
+      llm/
+      models/
+      schemas/
+      search/
+      services/
+      workers/
+    alembic/
+    tests/
+  web/
+    app/
+    components/
+    features/
+    lib/
+    styles/
+    tests/
+docs/
+docker/
+knowledge-vault/
+```
+
+## Development Commands To Establish
+
+Once code exists, standardize these commands in the root README and package files:
 
 ```bash
 docker compose up --build
-docker compose run --rm api alembic upgrade head
-docker compose run --rm api pytest
-docker compose run --rm web npm test
-docker compose run --rm web npm run lint
+docker compose exec api alembic upgrade head
+docker compose exec api pytest
+docker compose exec web npm run lint
+docker compose exec web npm run test
 ```
 
-Update this file when the actual commands differ.
+If commands differ, update this file and the README immediately.
 
-## Documentation Map
+## Implementation Guardrails
 
-- `README.md`: project overview and quick start direction.
-- `docs/01-product-requirements.md`: MVP scope and product requirements.
-- `docs/02-system-architecture.md`: technical architecture.
-- `docs/03-data-model.md`: core entities and relationships.
-- `docs/04-agent-workflows.md`: agent workflow design.
-- `docs/05-api-design.md`: planned API endpoints.
-- `docs/06-frontend-plan.md`: frontend screens and UX structure.
-- `docs/07-deployment-config.md`: Docker and configuration plan.
-- `docs/08-security-privacy.md`: privacy, security, and data handling.
-- `docs/09-testing-quality.md`: test strategy and quality gates.
-- `docs/10-roadmap.md`: staged implementation roadmap.
-- `docs/superpowers/specs/2026-06-04-cv-master-design.md`: approved design spec.
+- Keep modules small and explicit.
+- Prefer typed schemas and structured outputs over free-form strings.
+- Keep prompts versioned and testable.
+- Separate retrieval, strategy, writing, critique, and export services.
+- Avoid hard-coding provider names in workflow logic.
+- Do not introduce multi-user SaaS features in the MVP unless they support future migration without complicating the current product.
+- Do not make generated resume text impossible to trace back to source records.
 
-## Handoff Checklist For Future Agents
+## Documentation Maintenance
 
-Before making changes:
+When architecture, data models, API contracts, provider behavior, deployment, or user flows change, update the relevant document in `docs/` during the same change.
 
-1. Read this file.
-2. Read the design spec and roadmap.
-3. Check `git status --short`.
-4. Preserve user changes. Do not revert files you did not modify.
-5. If implementing code, create or update tests for the changed behavior.
-6. Run the relevant verification commands before claiming completion.
+Major decisions should be recorded in `docs/adr/`.
 
-Before handing off:
+## External References
 
-1. Update docs if architecture, commands, or environment variables changed.
-2. Summarize completed work, verification evidence, and remaining risks.
-3. Leave the repository in a state another coding agent can understand quickly.
+- FastAPI: https://fastapi.tiangolo.com/
+- LangGraph: https://docs.langchain.com/oss/python/langgraph
+- Next.js App Router: https://nextjs.org/docs/app
+- Pydantic Settings: https://pydantic.dev/
+- Celery: https://docs.celeryq.dev/en/stable/
+- pgvector: https://github.com/pgvector/pgvector
+- Adminer: https://www.adminer.org/
+- Tavily API: https://docs.tavily.com/

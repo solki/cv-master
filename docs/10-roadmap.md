@@ -1,137 +1,118 @@
 # Roadmap
 
-## Milestone 0: Documentation And Project Skeleton
+## Phase 0: Planning
 
-Status: documentation created.
-
-Deliverables:
-
-- planning docs
-- AGENTS.md
-- target architecture
-- development roadmap
-
-## Milestone 1: Infrastructure Skeleton
+Status: current documentation phase.
 
 Deliverables:
 
-- monorepo structure
-- Docker Compose
-- FastAPI app
-- Next.js app
-- Postgres with pgvector
-- Redis
-- Adminer
-- `.env.example`
-- health checks
+- Product requirements.
+- Knowledge base strategy.
+- Architecture.
+- Data model.
+- Agent workflow design.
+- API design.
+- Frontend design.
+- Deployment and testing plan.
+- Agent handoff guide.
 
-Acceptance:
+## Phase 1: MVP Foundation
 
-- `docker compose up --build` starts all services
-- API health endpoint works
-- Adminer can connect to Postgres
-
-## Milestone 2: Core Career Data
+Goal: create a working local application shell.
 
 Deliverables:
 
-- SQLAlchemy models
-- Alembic migrations
-- CRUD APIs
-- frontend forms for profile, work experiences, projects, skills, achievements, education, certifications, evidence
+- Docker Compose environment.
+- FastAPI application.
+- Postgres with pgvector.
+- Alembic migrations.
+- Next.js application shell.
+- Settings and provider validation.
+- Basic health checks.
 
-Acceptance:
+## Phase 2: Career Knowledge Base
 
-- user can create and edit core career records
-- records persist in Postgres
-- evidence can link to career entities
-
-## Milestone 3: Knowledge Base And Retrieval
-
-Deliverables:
-
-- Markdown vault sync
-- embedding records
-- pgvector semantic search
-- Postgres full-text search
-- hybrid retrieval service
-
-Acceptance:
-
-- user can search career data by JD-like queries
-- retrieval returns relevant evidence with source references
-
-## Milestone 4: LLM And Search Providers
+Goal: store and retrieve user career facts.
 
 Deliverables:
 
-- provider adapters for OpenAI-compatible, OpenAI, Anthropic, and Ollama
-- Tavily search adapter
-- provider health checks
-- structured output retry handling
+- CRUD APIs and UI for profile, positions, projects, skills, education, certifications, achievements, and evidence.
+- Markdown vault sync.
+- Embedding generation.
+- Hybrid retrieval service.
+- Profile completeness indicators.
 
-Acceptance:
+## Phase 3: JD Analysis And Retrieval
 
-- active provider selected by `LLM_PROVIDER`
-- provider can be tested from settings or health endpoint
-
-## Milestone 5: Resume Generation MVP
+Goal: turn job descriptions into structured targeting plans.
 
 Deliverables:
 
-- JD analyzer
-- retrieval planner
-- resume strategist
-- resume writer
-- resume critic
-- generation run tracking
-- one ATS-safe template
+- JD ingestion.
+- JD analyzer agent.
+- Tavily search provider.
+- Profile gap analysis.
+- Retrieval preview UI.
 
-Acceptance:
+## Phase 4: Resume Generation
 
-- user can paste a JD and generate a grounded resume draft
-- generation run stores evidence references and critique output
-
-## Milestone 6: Export System
+Goal: generate grounded resume drafts.
 
 Deliverables:
 
-- Markdown export
-- HTML export
-- PDF export
-- DOCX export
-- download endpoints
-- frontend preview
+- LangGraph resume generation workflow.
+- Resume strategy agent.
+- Resume writer agent.
+- ATS review agent.
+- Grounding review agent.
+- Editable Resume Studio UI.
 
-Acceptance:
+## Phase 5: Export System
 
-- user can download all requested formats
-- PDF and DOCX are professionally formatted
-
-## Milestone 7: Product Polish
+Goal: export approved resumes in all required formats.
 
 Deliverables:
 
-- resume library
-- version comparison
-- better critique UI
-- missing evidence prompts
-- sample data and onboarding flow
+- Markdown renderer.
+- HTML renderer.
+- PDF renderer.
+- Word renderer.
+- Export history.
+- ATS-safe template.
 
-Acceptance:
+## Phase 6: Quality And Polish
 
-- user can use the system repeatedly for different JDs with minimal friction
+Goal: make the MVP reliable enough for real use.
 
-## Phase 2: Personal Career Assistant
+Deliverables:
 
-Candidate capabilities:
+- End-to-end tests.
+- Export smoke tests.
+- Agent regression fixtures.
+- UI polish.
+- Settings UX.
+- Error handling and recovery.
 
-- conversational career memory
-- interview prep agent
-- recruiter email drafting
-- application tracker
-- richer memory graph
-- optional local desktop packaging
-- optional profile scoping
-- extensible career tool registry
+## Phase 7: Personal Career Assistant Evolution
 
+Goal: evolve beyond resume generation into a specialized career assistant.
+
+Potential capabilities:
+
+- Interview preparation.
+- Job application tracker.
+- Recruiter email drafting.
+- Career planning.
+- Profile gap coaching.
+- Portfolio and case study generation.
+- Mem0-style conversational memory.
+- Local document ingestion.
+- More search providers.
+- Remote private deployment.
+
+## Explicit Non-Roadmap For Now
+
+- Billing.
+- Public SaaS tenant model.
+- Team administration.
+- Recruiter-side workflows.
