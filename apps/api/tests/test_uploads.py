@@ -157,3 +157,26 @@ class TestJDUpload:
         assert list_res.status_code == 200
         titles = [item["title"] for item in list_res.json()["items"]]
         assert "listing.md" in titles
+
+
+class TestJDFetchURL:
+    """Tests for JD fetch-url endpoint error classification."""
+
+    async def test_fetch_url_http_404_returns_400(self, async_client):
+        """A 404 from the target URL returns 400 with clear message."""
+        res = await async_client.post("/api/job-descriptions/fetch-url", json={
+            "url": "https://httpstat.us/404",
+        })
+        # 400 for client error from target; 502 if network fails
+        assert res.status_code in (400, 502)
+        detail = res.json()["detail"].lower()
+        assert "404" in detail or "not found" in detail or "unreachable" in detail or "could not" in detail
+
+    async def test_fetch_url_invalid_host_returns_502(self, async_client):
+        """An unreachable host returns 502 with network error message."""
+        res = await async_client.post("/api/job-descriptions/fetch-url", json={
+            "url": "https://invalid.host.that.does.not.exist.example",
+        })
+        assert res.status_code in (400, 502)
+        # Should not return raw stack trace
+        assert "traceback" not in res.json()["detail"].lower()

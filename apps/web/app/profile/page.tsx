@@ -73,7 +73,9 @@ export default function CareerProfilePage() {
         {editing ? (
           <div className="space-y-3">
             {["full_name", "headline", "location", "email", "phone", "links"].map((field) => (
-              <input key={field} type="text" placeholder={field.replace(/_/g, " ")}
+              <input key={field}
+                type={field === "email" ? "email" : field === "links" ? "url" : "text"}
+                placeholder={field.replace(/_/g, " ")}
                 value={form[field]}
                 onChange={(e) => setForm({ ...form, [field]: e.target.value })}
                 className="w-full border border-slate-700 rounded px-3 py-2 text-sm bg-slate-800 text-slate-100"

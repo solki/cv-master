@@ -13,7 +13,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function ResumeLibraryPage() {
   const { data, isLoading, error } = useQuery<PaginatedResponse<Resume>>({
-    queryKey: ["library-resumes"],
+    queryKey: ["resumes", { limit: 50 }],
     queryFn: () => api.get<PaginatedResponse<Resume>>("/api/resumes?limit=50"),
   });
 
