@@ -6,6 +6,8 @@ from app.api.routes.profile import router as profile_router
 from app.api.routes.job_descriptions import router as jd_router
 from app.api.routes.resumes import router as resumes_router
 from app.api.routes.ingestion import router as ingestion_router
+from app.api.routes.retrieval import router as retrieval_router
+from app.api.routes.exports import router as exports_router
 from app.api.routes.career_routers import (
     positions_router,
     projects_router,
@@ -41,7 +43,7 @@ def create_app() -> FastAPI:
     # Profile
     app.include_router(profile_router)
 
-    # Career entity CRUD
+    # Career entity CRUD (7 routers)
     app.include_router(positions_router)
     app.include_router(projects_router)
     app.include_router(achievements_router)
@@ -53,11 +55,17 @@ def create_app() -> FastAPI:
     # Job Descriptions
     app.include_router(jd_router)
 
-    # Resumes
+    # Resume Generation
     app.include_router(resumes_router)
 
-    # Resume Ingestion
+    # Resume PDF Ingestion
     app.include_router(ingestion_router)
+
+    # Knowledge Retrieval
+    app.include_router(retrieval_router)
+
+    # Exports
+    app.include_router(exports_router)
 
     return app
 
