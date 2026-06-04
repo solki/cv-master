@@ -228,6 +228,42 @@ Fields:
 - `embedding_model`
 - `created_at`
 
+### ResumeIngestion
+
+Represents one PDF resume upload and extraction session. Tracks ingestion progress and candidate review state.
+
+Fields:
+
+- `id`
+- `source_filename`
+- `status` (`processing`, `ready_for_review`, `imported`, `failed`)
+- `error_message`
+- `created_at`
+- `updated_at`
+
+### ResumeIngestionCandidate
+
+Represents one extracted candidate snippet from an uploaded resume. Ephemeral — only exists until the user accepts or rejects it during review.
+
+Fields:
+
+- `id`
+- `resume_ingestion_id`
+- `entity_type` (`position`, `project`, `achievement`, `skill`, `education`, `certification`)
+- `extracted_data` (JSON with the structured data extracted by the LLM)
+- `confidence` (`high_confidence`, `needs_review`, `low_confidence`)
+- `status` (`pending`, `accepted`, `rejected`)
+- `user_edits` (JSON with user modifications, if any)
+- `created_at`
+- `updated_at`
+
+### JobDescription (fields extended)
+
+In addition to the core fields already defined:
+
+- `source_type` (`pasted`, `url`, `md_upload`) — tracks how the JD was ingested.
+- `source_filename` — original filename when uploaded as Markdown.
+
 ## Relationship Diagram
 
 ```mermaid
@@ -244,6 +280,7 @@ erDiagram
   Resume ||--o{ ResumeVersion : versions
   ResumeVersion ||--o{ ResumeBulletEvidence : grounds
   Evidence ||--o{ ResumeBulletEvidence : supports
+  ResumeIngestion ||--o{ ResumeIngestionCandidate : contains
 ```
 
 ## Retrieval Model

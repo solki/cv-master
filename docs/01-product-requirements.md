@@ -33,10 +33,11 @@ High-quality resume targeting is repetitive and error-prone. A user often has ma
 - Career events and timeline notes
 - Evidence items such as links, documents, metrics, and raw notes
 - Markdown vault export/sync for local-readable career memory
+- PDF resume upload and parsing: the user can upload an existing resume in PDF format. The system extracts structured information (positions, projects, skills, education, etc.) and presents them as candidate snippets. The user reviews and selects which snippets to import into the career knowledge base.
 
 ### Resume Generation
 
-- Paste or upload a job description
+- Paste a job description, upload a Markdown JD file, or provide a JD website URL for the agent to fetch and parse
 - Analyze role, seniority, responsibilities, hard requirements, nice-to-have requirements, keywords, and risks
 - Retrieve matching career facts
 - Generate resume strategy

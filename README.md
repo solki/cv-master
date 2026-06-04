@@ -33,3 +33,33 @@ The long-term direction is a specialized personal career assistant, not a generi
 ## MVP Principle
 
 The resume agent must optimize for recruiter and ATS screening while staying grounded in the user's real career evidence. Generated claims should be traceable to stored career facts, projects, achievements, or evidence records.
+
+## Development Commands
+
+```bash
+# Start all services
+docker compose -f docker/docker-compose.yml up --build
+
+# Database migrations
+docker compose -f docker/docker-compose.yml exec api alembic upgrade head
+docker compose -f docker/docker-compose.yml exec api alembic revision --autogenerate -m "description"
+
+# Backend tests
+docker compose -f docker/docker-compose.yml exec api pytest
+docker compose -f docker/docker-compose.yml exec api pytest tests/test_health.py
+docker compose -f docker/docker-compose.yml exec api pytest -k "test_settings"
+
+# Frontend
+docker compose -f docker/docker-compose.yml exec web npm run dev
+docker compose -f docker/docker-compose.yml exec web npm run build
+docker compose -f docker/docker-compose.yml exec web npm run lint
+
+# Local development (without Docker)
+cd apps/api
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+
+cd apps/web
+npm install
+npm run dev
+```

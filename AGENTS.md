@@ -26,6 +26,7 @@ Start with:
 - `docs/08-security-privacy.md`
 - `docs/09-testing-quality.md`
 - `docs/10-roadmap.md`
+- `docs/11-development-task-breakdown.md`
 - `docs/adr/0001-knowledge-base-architecture.md`
 - `docs/adr/0002-llm-provider-strategy.md`
 

@@ -96,9 +96,15 @@ GET /api/job-descriptions
 POST /api/job-descriptions
 GET /api/job-descriptions/{job_description_id}
 POST /api/job-descriptions/{job_description_id}/analyze
+POST /api/job-descriptions/fetch-url
+POST /api/job-descriptions/upload-md
 ```
 
-The analyze endpoint should enqueue a job and return a job ID.
+The `analyze` endpoint should enqueue a job and return a job ID.
+
+The `fetch-url` endpoint accepts a URL, fetches its content, extracts plain text, and creates a `JobDescription` record with both `raw_text` and `source_url` populated.
+
+The `upload-md` endpoint accepts a `.md` file upload, reads it as plain text, and creates a `JobDescription` record with `raw_text` populated.
 
 ### Retrieval
 
@@ -108,6 +114,28 @@ POST /api/retrieval/profile-gap-analysis
 ```
 
 Used by the frontend for previews and diagnostics.
+
+### Resume Ingestion
+
+```http
+POST /api/ingestion/resume/upload
+GET /api/ingestion/resume/{ingestion_id}
+GET /api/ingestion/resume/{ingestion_id}/candidates
+POST /api/ingestion/resume/{ingestion_id}/candidates/{candidate_id}/accept
+POST /api/ingestion/resume/{ingestion_id}/candidates/{candidate_id}/reject
+PUT /api/ingestion/resume/{ingestion_id}/candidates/{candidate_id}
+POST /api/ingestion/resume/{ingestion_id}/import
+```
+
+Workflow:
+
+1. `POST /api/ingestion/resume/upload` — accepts a PDF file. Extracts text from the PDF. Enqueues an LLM analysis job. Returns an `ingestion_id` and status `processing`.
+2. `GET /api/ingestion/resume/{ingestion_id}` — returns the ingestion status (`processing`, `ready_for_review`, `imported`, `failed`) and metadata.
+3. `GET /api/ingestion/resume/{ingestion_id}/candidates` — returns the list of candidate snippets with entity types, extracted data, and confidence labels (`high_confidence`, `needs_review`, `low_confidence`).
+4. `POST .../candidates/{candidate_id}/accept` — marks a candidate as accepted.
+5. `POST .../candidates/{candidate_id}/reject` — marks a candidate as rejected.
+6. `PUT .../candidates/{candidate_id}` — updates a candidate with user edits before acceptance.
+7. `POST .../import` — imports all accepted candidates into the knowledge base as structured records. Enqueues embedding generation and vault sync. Returns the created entity IDs.
 
 ### Resumes
 

@@ -34,6 +34,7 @@ Purpose:
 - Show recent resume runs
 - Show missing evidence or weak areas
 - Provide quick action to paste a JD
+- Provide quick action to upload an existing resume (PDF) for bootstrapping the knowledge base
 
 ### Career Profile
 
@@ -42,6 +43,7 @@ Purpose:
 - Manage work experience, education, certifications, skills, and achievements
 - Show career timeline
 - Link facts to evidence
+- Import data via PDF resume upload: trigger upload, view extraction progress, review candidate snippets in a side-by-side or list interface, accept/reject/edit candidates, and confirm import into the knowledge base
 
 ### Projects
 
@@ -62,7 +64,7 @@ Purpose:
 
 Purpose:
 
-- Paste or load a job description
+- Paste or load a job description (plain text, Markdown file upload, or website URL fetch)
 - Show extracted requirements, keywords, and role analysis
 - Highlight likely match/gap areas
 
@@ -124,6 +126,7 @@ Use custom components for:
 - JD keyword coverage
 - generation progress
 - source confidence badges
+- resume ingestion candidate review (side-by-side snippet list, accept/reject/edit controls, confidence indicator badges, batch accept/reject)
 
 ## State Management
 
