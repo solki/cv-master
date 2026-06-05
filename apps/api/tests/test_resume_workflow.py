@@ -165,3 +165,96 @@ class TestExportIDParsing:
     async def test_export_id_without_export_prefix_returns_400(self, async_client):
         res = await async_client.get("/api/exports/someuuid:markdown/download")
         assert res.status_code == 400
+
+
+class TestJDAnalysis:
+    """Tests for the JD analysis endpoint."""
+
+    async def test_analyze_returns_structured_output(self, async_client):
+        """Analysis returns job_title, seniority, skills."""
+        jd_res = await async_client.post("/api/job-descriptions", json={
+            "title": "Test JD", "raw_text": "Senior Python Developer with FastAPI, Docker, AWS experience."
+        })
+        jd_id = jd_res.json()["id"]
+
+        res = await async_client.post(f"/api/job-descriptions/{jd_id}/analyze")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == "completed"
+        assert "analysis" in data
+        analysis = data["analysis"]
+        # Basic extraction should find Python as a skill
+        assert "job_title" in analysis
+        assert "required_skills" in analysis
+        assert "ats_keywords" in analysis
+
+    async def test_analyze_nonexistent_jd_returns_404(self, async_client):
+        """Analysis of non-existent JD returns 404."""
+        res = await async_client.post("/api/job-descriptions/fake-id/analyze")
+        assert res.status_code == 404
+
+    async def test_analysis_stored_on_jd(self, async_client):
+        """After analysis, the JD record contains the analysis JSON."""
+        jd_res = await async_client.post("/api/job-descriptions", json={
+            "title": "Store Test", "raw_text": "React developer with TypeScript skills."
+        })
+        jd_id = jd_res.json()["id"]
+
+        await async_client.post(f"/api/job-descriptions/{jd_id}/analyze")
+
+        # Fetch the JD and verify analysis is stored
+        get_res = await async_client.get(f"/api/job-descriptions/{jd_id}")
+        assert get_res.status_code == 200
+        jd_data = get_res.json()
+        assert jd_data["analysis"] != ""
+
+    async def test_analyze_empty_jd_still_works(self, async_client):
+        """Analysis of a JD with minimal text returns without error."""
+        jd_res = await async_client.post("/api/job-descriptions", json={
+            "title": "Empty", "raw_text": "No real content here."
+        })
+        jd_id = jd_res.json()["id"]
+
+        res = await async_client.post(f"/api/job-descriptions/{jd_id}/analyze")
+        assert res.status_code == 200
+
+
+class TestGenerateWorkflow:
+    """Tests for the generate endpoint with real pipeline."""
+
+    async def test_generate_handles_missing_jd(self, async_client):
+        """Generate still works when JD is not found or empty."""
+        # Create resume without JD
+        res = await async_client.post("/api/resumes", json={
+            "title": "No JD Resume", "target_role": "Developer",
+        })
+        resume_id = res.json()["id"]
+
+        gen_res = await async_client.post(f"/api/resumes/{resume_id}/generate", json={
+            "job_description_id": "",
+        })
+        assert gen_res.status_code == 200
+        assert gen_res.json()["status"] == "generated"
+
+    async def test_generate_stores_version_content(self, async_client):
+        """Generated version has valid content_json."""
+        jd_res = await async_client.post("/api/job-descriptions", json={
+            "title": "Content JD", "raw_text": "Python dev"
+        })
+        jd_id = jd_res.json()["id"]
+        res = await async_client.post("/api/resumes", json={
+            "title": "Content CV", "target_role": "Dev", "job_description_id": jd_id,
+        })
+        resume_id = res.json()["id"]
+        await async_client.post(f"/api/resumes/{resume_id}/generate", json={
+            "job_description_id": jd_id,
+        })
+
+        ver_res = await async_client.get(f"/api/resumes/{resume_id}/versions")
+        version = ver_res.json()[0]
+        assert version["version_number"] >= 1
+        assert version["content_json"] != ""
+        import json
+        content = json.loads(version["content_json"])
+        assert "resume" in content
+        assert "workflow_errors" in content
