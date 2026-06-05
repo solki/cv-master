@@ -5,6 +5,7 @@ from app.models.job_description import JobDescription
 from app.schemas.job_descriptions import JDCreate, JDFetchURLRequest, JDResponse
 from app.schemas.common import paginated_response, JobResponse
 from app.services.crud import BaseCRUD
+from app.llm import get_llm_client
 
 router = APIRouter(prefix="/api/job-descriptions", tags=["job_descriptions"])
 crud = BaseCRUD(JobDescription)
@@ -97,9 +98,72 @@ async def upload_jd_md(file: UploadFile = File(...), db: AsyncSession = Depends(
 
 @router.post("/{jd_id}/analyze")
 async def analyze_jd(jd_id: str, db: AsyncSession = Depends(get_db)):
-    """Enqueue JD analysis job."""
+    """Analyze a JD using the LLM agent and store results."""
     jd = await crud.get(db, jd_id)
     if jd is None:
         raise HTTPException(status_code=404, detail="Job description not found")
-    # In milestone 6 this will enqueue a real Celery task
-    return JobResponse(job_id=f"job_{jd_id}", status="queued")
+
+    import json
+    from app.agents.prompts.templates import JD_ANALYSIS_PROMPT
+
+    try:
+        llm = get_llm_client()
+        prompt = JD_ANALYSIS_PROMPT.format(jd_text=jd.raw_text)
+        result = await llm.generate(
+            messages=[{"role": "user", "content": prompt}],
+            response_schema={"name": "jd_analysis", "strict": True},
+        )
+        # Store analysis result
+        jd.analysis = json.dumps(result)
+        await db.flush()
+
+        return {
+            "job_id": f"job_{jd_id}",
+            "jd_id": jd_id,
+            "status": "completed",
+            "analysis": result,
+        }
+    except Exception as e:
+        # Fallback: basic extraction without LLM
+        basic = _basic_jd_extraction(jd.raw_text)
+        jd.analysis = json.dumps(basic)
+        await db.flush()
+        return {
+            "job_id": f"job_{jd_id}",
+            "jd_id": jd_id,
+            "status": "completed",
+            "analysis": basic,
+            "warning": f"LLM unavailable, used basic extraction: {str(e)}",
+        }
+
+
+def _basic_jd_extraction(raw_text: str) -> dict:
+    """Fallback JD extraction without LLM."""
+    import re
+    # Simple keyword extraction
+    tech_keywords = [
+        "Python", "JavaScript", "TypeScript", "Java", "Go", "Rust", "C\\+\\+",
+        "React", "Angular", "Vue", "Node\\.js", "FastAPI", "Django", "Flask",
+        "PostgreSQL", "MySQL", "MongoDB", "Redis", "Docker", "Kubernetes",
+        "AWS", "Azure", "GCP", "CI/CD", "REST", "GraphQL", "gRPC",
+    ]
+    found = []
+    for kw in tech_keywords:
+        if re.search(kw, raw_text, re.IGNORECASE):
+            found.append(kw.replace("\\", ""))
+
+    # Try to extract title from first line
+    lines = raw_text.strip().split("\n")
+    title = lines[0].strip("# ").strip() if lines else ""
+
+    return {
+        "job_title": title,
+        "seniority": "mid",
+        "required_skills": found[:10],
+        "preferred_skills": [],
+        "responsibilities": [l.strip("- ") for l in lines[1:6] if l.strip()],
+        "domain_keywords": [],
+        "ats_keywords": found,
+        "research_queries": [],
+        "red_flags": [],
+    }

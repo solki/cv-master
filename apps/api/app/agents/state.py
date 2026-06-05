@@ -26,3 +26,4 @@ class ResumeWorkflowState(TypedDict, total=False):
     errors: list[str]
     needs_revision: bool
     current_stage: str
+    revision_count: int

@@ -57,7 +57,7 @@ async def generate_resume(
     if resume is None:
         raise HTTPException(status_code=404, detail="Resume not found")
 
-    # Count existing versions to determine version_number
+    # Count existing versions
     from sqlalchemy import select, func
     count_q = select(func.count()).select_from(ResumeVersion).where(
         ResumeVersion.resume_id == resume_id
@@ -65,33 +65,72 @@ async def generate_resume(
     result = await db.execute(count_q)
     existing_count = result.scalar() or 0
 
+    # Fetch JD text for the workflow
+    jd_text = ""
+    if resume.job_description_id:
+        from app.models.job_description import JobDescription
+        jd_crud = BaseCRUD(JobDescription)
+        jd = await jd_crud.get(db, resume.job_description_id)
+        if jd:
+            jd_text = jd.raw_text
+
+    # Run the LLM agent workflow (falls back to mock if LLM unavailable)
     import json
-    placeholder_content = json.dumps({
-        "header": {"full_name": "", "email": "", "phone": "", "location": ""},
-        "summary": "",
-        "skills": [],
-        "experience": [],
-        "projects": [],
-        "education": [],
-        "certifications": [],
+    try:
+        from app.agents.workflow import run_resume_generation
+        workflow_result = await run_resume_generation(
+            jd_text=jd_text,
+            job_description_id=resume.job_description_id or "",
+        )
+        # Use the LLM-generated draft as content
+        draft = workflow_result.get("draft_resume") or {}
+        ats_review = workflow_result.get("ats_review") or {}
+        grounding = workflow_result.get("grounding_review") or {}
+        errors = workflow_result.get("errors", [])
+        status = "generated"
+    except Exception as e:
+        # Fallback: create placeholder version with workflow error info
+        draft = {
+            "header": {"full_name": "", "email": "", "phone": "", "location": ""},
+            "summary": f"[LLM workflow unavailable — using placeholder. Error: {str(e)[:200]}]",
+            "skills": [],
+            "experience": [],
+            "projects": [],
+            "education": [],
+            "certifications": [],
+        }
+        ats_review = {}
+        grounding = {}
+        errors = [str(e)]
+        status = "generated"
+
+    content_json = json.dumps({
+        "resume": draft,
+        "ats_review": ats_review,
+        "grounding_review": grounding,
+        "workflow_errors": errors,
     })
 
     version = ResumeVersion(
         resume_id=resume_id,
         version_number=existing_count + 1,
-        content_json=placeholder_content,
+        content_json=content_json,
         markdown="",
         html="",
-        ats_score=None,
+        ats_score=ats_review.get("score") if isinstance(ats_review, dict) else None,
     )
     db.add(version)
     await db.flush()
     await db.refresh(version)
 
+    # Update resume status
+    resume.status = status
+    await db.flush()
+
     return ResumeGenerateResponse(
         job_id=f"job_{resume_id}",
         resume_id=resume_id,
-        status="generated",
+        status=status,
     )
 
 

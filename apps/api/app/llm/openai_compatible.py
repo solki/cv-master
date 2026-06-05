@@ -1,3 +1,4 @@
+import json
 from typing import Any, AsyncIterator
 from app.llm.base import LLMClient
 from app.core.settings import get_settings
@@ -22,13 +23,41 @@ class OpenAICompatibleClient(LLMClient):
     ) -> dict:
         client = await self._get_client()
         kwargs = {"model": self.model, "messages": messages, **options}
+
         if response_schema:
-            kwargs["response_format"] = {"type": "json_schema", "json_schema": response_schema}
-        response = await client.chat.completions.create(**kwargs)
+            schema_name = response_schema.get("name", "response")
+            # Add schema instruction to the prompt for providers that don't support json_schema
+            schema_desc = json.dumps(response_schema, indent=2)
+            messages = list(messages)  # Don't mutate original
+            messages.append({
+                "role": "system",
+                "content": f"Respond with a JSON object matching this schema: {schema_desc}\nReturn ONLY valid JSON, no other text."
+            })
+            kwargs["messages"] = messages
+            # Try json_object format (more widely supported than json_schema)
+            try:
+                kwargs["response_format"] = {"type": "json_object"}
+                response = await client.chat.completions.create(**kwargs)
+            except Exception:
+                # Fallback: no response_format constraint
+                kwargs.pop("response_format", None)
+                response = await client.chat.completions.create(**kwargs)
+        else:
+            response = await client.chat.completions.create(**kwargs)
+
         content = response.choices[0].message.content
         if response_schema and content:
-            import json
-            return json.loads(content)
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError:
+                # Try to extract JSON from markdown code blocks
+                if "```json" in content:
+                    json_str = content.split("```json")[1].split("```")[0]
+                    return json.loads(json_str)
+                if "```" in content:
+                    json_str = content.split("```")[1].split("```")[0]
+                    return json.loads(json_str)
+                return {"content": content, "parse_error": "Could not parse JSON from response"}
         return {"content": content or ""}
 
     async def stream(
