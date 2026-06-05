@@ -1,18 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import type { Resume, JD, PaginatedResponse } from "@/lib/types";
+import PageHeader from "@/components/ui/page-header";
+import { ListSkeleton } from "@/components/ui/skeleton";
+import EmptyState from "@/components/ui/empty-state";
 import { toast } from "@/components/ui/toast";
+import { ResumeIcon } from "@/components/icons";
 
-export default function ResumeGeneratorPage() {
+function ResumeGeneratorInner() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const [title, setTitle] = useState("");
   const [targetRole, setTargetRole] = useState("");
   const [jdId, setJdId] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Resume | null>(null);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const jdParam = searchParams.get("jd_id");
+    if (jdParam) setJdId(jdParam);
+  }, [searchParams]);
 
   const { data: resumes, isLoading: resumesLoading, error: resumesError } = useQuery<PaginatedResponse<Resume>>({
     queryKey: ["resumes", { limit: 10 }],
@@ -62,10 +73,7 @@ export default function ResumeGeneratorPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold">Resume Generator</h1>
-        <p className="text-slate-400 mt-1">Create a job-targeted resume</p>
-      </div>
+      <PageHeader title="Resume Generator" description="Create a job-targeted resume" />
 
       <div className="bg-slate-900 rounded-lg border border-slate-700 p-6 space-y-4">
         <h2 className="font-semibold text-slate-200">New Resume</h2>
@@ -98,7 +106,7 @@ export default function ResumeGeneratorPage() {
       <div className="bg-slate-900 rounded-lg border border-slate-700 p-6">
         <h2 className="font-semibold text-slate-200 mb-4">Your Resumes</h2>
         {resumesLoading ? (
-          <p className="text-sm text-slate-400">Loading...</p>
+          <ListSkeleton rows={4} />
         ) : resumesError ? (
           <p className="text-sm text-red-400">Failed to load resumes</p>
         ) : resumes?.items?.length ? (
@@ -133,7 +141,11 @@ export default function ResumeGeneratorPage() {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-slate-500">No resumes yet.</p>
+          <EmptyState
+            icon={<ResumeIcon className="w-5 h-5" />}
+            title="No resumes yet"
+            description="Create a new resume targeting a specific job description to get started."
+          />
         )}
       </div>
 
@@ -159,5 +171,13 @@ export default function ResumeGeneratorPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ResumeGeneratorPage() {
+  return (
+    <Suspense fallback={<div className="space-y-8"><PageHeader title="Resume Generator" description="Create a job-targeted resume" /><ListSkeleton rows={4} /></div>}>
+      <ResumeGeneratorInner />
+    </Suspense>
   );
 }
